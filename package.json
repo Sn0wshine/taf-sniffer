@@ -1,0 +1,36 @@
+{
+  "name": "taf-sniffer",
+  "private": true,
+  "version": "0.821",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:proxy": "node server.mjs",
+    "start": "node server.mjs",
+    "start:local": "node server.mjs",
+    "sync:version": "node scripts/sync-version.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "android:init": "node scripts/android-init.mjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:check": "node scripts/android-check.mjs",
+    "android:build:debug": "node scripts/android-build-debug.mjs",
+    "android:install:debug": "node scripts/android-install-debug.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@vitejs/plugin-react": "^5.1.1",
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "vite": "^7.2.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "Taf Sniffer",
+  "short_name": "Taf Sniffer",
+  "description": "Analyse et classe les offres d'emploi selon ton plan de reconversion.",
+  "id": "./taf-sniffer.html",
+  "start_url": "./taf-sniffer.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#06756f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

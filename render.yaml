@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: taf-sniffer-proxy
+    env: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: TAF_SNIFFER_PROXY_HOST
+        value: 0.0.0.0
+      - key: TAF_SNIFFER_LOGS
+        value: on
+      - key: TAF_SNIFFER_LOG_RETENTION_DAYS
+        value: "14"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: GEMINI_FALLBACK_MODELS
+        value: gemini-3.1-flash-lite,gemini-2.5-flash-lite
+      - key: FRANCE_TRAVAIL_CLIENT_ID
+        sync: false
+      - key: FRANCE_TRAVAIL_CLIENT_SECRET
+        sync: false
+      - key: FRANCE_TRAVAIL_SCOPE
+        value: api_offresdemploiv2 o2dsoffre
+      - key: FRANCE_TRAVAIL_TOKEN_URL
+        value: https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire
+      - key: FRANCE_TRAVAIL_API_BASE
+        value: https://api.francetravail.io/partenaire/offresdemploi/v2
+      - key: FRANCE_TRAVAIL_SEARCH_PATH
+        value: /offres/search

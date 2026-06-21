@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Taf Sniffer</string>
+    <string name="title_activity_main">Taf Sniffer</string>
+    <string name="package_name">fr.tafsniffer.app</string>
+    <string name="custom_url_scheme">fr.tafsniffer.app</string>
+</resources>

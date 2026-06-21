@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+diagnostics/
+.android-sdk/
+.android-sdk-download/
+.jdk/
+.jdk-download/
+.npm-cache/
+*.log

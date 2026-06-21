@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Taf Sniffer">
+  <rect width="512" height="512" rx="96" fill="#06756f"/>
+  <circle cx="246" cy="246" r="142" fill="none" stroke="#ffffff" stroke-width="34"/>
+  <path d="M344 344l76 76" fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round"/>
+  <path d="M169 246h154M246 169v154" fill="none" stroke="#e5f4f2" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="246" cy="246" r="42" fill="#ffffff"/>
+</svg>
