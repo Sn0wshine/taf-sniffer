@@ -7881,6 +7881,7 @@ function ScoreRadar({
   analysis: JobAnalysis;
   activeProfile: ReturnType<typeof getActiveProfile>;
 }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const axes = [
     { label: "Formation", value: analysis.scores.formationFacilitee ?? analysis.scores.training },
     { label: "Salaire", value: analysis.scores.salaryPackage ?? analysis.scores.cashflow },
@@ -7889,55 +7890,90 @@ function ScoreRadar({
     { label: "Risque", value: analysis.scores.risk },
   ];
   const center = 50;
-  const maxRadius = 34;
+  const maxRadius = 30;
+  const labelRadius = maxRadius + 13;
+
+  const angleFor = (index: number) => -Math.PI / 2 + (index * Math.PI * 2) / axes.length;
+
   const pointFor = (index: number, value: number) => {
-    const angle = -Math.PI / 2 + (index * Math.PI * 2) / axes.length;
+    const angle = angleFor(index);
     const radius = (Math.max(0, Math.min(100, value)) / 100) * maxRadius;
-    return {
-      x: center + Math.cos(angle) * radius,
-      y: center + Math.sin(angle) * radius,
-    };
+    return { x: center + Math.cos(angle) * radius, y: center + Math.sin(angle) * radius };
   };
   const outerPointFor = (index: number, radius = maxRadius) => {
-    const angle = -Math.PI / 2 + (index * Math.PI * 2) / axes.length;
-    return {
-      x: center + Math.cos(angle) * radius,
-      y: center + Math.sin(angle) * radius,
-    };
+    const angle = angleFor(index);
+    return { x: center + Math.cos(angle) * radius, y: center + Math.sin(angle) * radius };
   };
-  const polygon = axes.map((axis, index) => {
-    const point = pointFor(index, axis.value);
-    return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+
+  const polygon = axes.map((_, index) => {
+    const p = pointFor(index, axes[index].value);
+    return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
   }).join(" ");
   const grid = [0.33, 0.66, 1].map((ratio) =>
     axes.map((_, index) => {
-      const point = outerPointFor(index, maxRadius * ratio);
-      return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      const p = outerPointFor(index, maxRadius * ratio);
+      return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
     }).join(" "),
   );
 
   return (
     <div className="score-radar" aria-label="Radar des axes de score">
-      <svg viewBox="0 0 100 100" role="img" aria-label="Radar score">
+      <svg viewBox="-16 -18 132 136" role="img" aria-label="Radar score" onMouseLeave={() => setHoveredIdx(null)}>
         {grid.map((points, index) => <polygon className="score-radar-grid" points={points} key={index} />)}
         {axes.map((_, index) => {
-          const point = outerPointFor(index);
-          return <line className="score-radar-axis" x1={center} y1={center} x2={point.x} y2={point.y} key={index} />;
+          const p = outerPointFor(index);
+          return <line className="score-radar-axis" x1={center} y1={center} x2={p.x} y2={p.y} key={index} />;
         })}
         <polygon className="score-radar-shape" points={polygon} />
         {axes.map((axis, index) => {
-          const point = pointFor(index, axis.value);
-          return <circle className="score-radar-dot" cx={point.x} cy={point.y} r="2.3" key={axis.label} />;
+          const p = pointFor(index, axis.value);
+          return <circle className="score-radar-dot" cx={p.x} cy={p.y} r="2" key={axis.label} />;
+        })}
+        {axes.map((axis, index) => {
+          const angle = angleFor(index);
+          const sin = Math.sin(angle);
+          const cos = Math.cos(angle);
+          const lp = { x: center + cos * labelRadius, y: center + sin * labelRadius };
+          const anchor: "start" | "middle" | "end" = cos > 0.25 ? "start" : cos < -0.25 ? "end" : "middle";
+          const active = hoveredIdx === index;
+          const labelColor = active ? "#3d6b1a" : "#526170";
+          const valueColor = active ? "#3d6b1a" : "#1e4848";
+
+          // position label+value lines relative to anchor point, going away from center
+          let labelY: number;
+          let valueY: number;
+          if (sin < -0.5) {
+            // top axis: text goes upward
+            valueY = lp.y + 1;
+            labelY = lp.y - 5.5;
+          } else if (sin > 0.5) {
+            // bottom axes: text goes downward
+            labelY = lp.y + 1;
+            valueY = lp.y + 7;
+          } else {
+            // side axes: center the two lines
+            labelY = lp.y - 2.5;
+            valueY = lp.y + 4;
+          }
+
+          return (
+            <g
+              key={`label-${axis.label}`}
+              onMouseEnter={() => setHoveredIdx(index)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              style={{ cursor: "default" }}
+            >
+              <circle cx={lp.x} cy={lp.y} r="14" fill="transparent" />
+              <text x={lp.x} y={labelY} textAnchor={anchor} fontSize="3.6" fontWeight="700" fill={labelColor}>
+                {axis.label.toUpperCase()}
+              </text>
+              <text x={lp.x} y={valueY} textAnchor={anchor} fontSize="6" fontWeight="900" fill={valueColor}>
+                {axis.value}
+              </text>
+            </g>
+          );
         })}
       </svg>
-      <div className="score-radar-legend">
-        {axes.map((axis) => (
-          <span key={axis.label}>
-            <small>{axis.label}</small>
-            <b>{axis.value}</b>
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

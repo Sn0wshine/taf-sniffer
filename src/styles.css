@@ -8126,20 +8126,16 @@ button:active:not(:disabled),
 }
 
 .score-radar {
-  align-items: center;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 13px;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: 112px minmax(0, 1fr);
   padding: 8px;
 }
 
 .score-radar svg {
   display: block;
-  height: 112px;
-  width: 112px;
+  height: auto;
+  width: 100%;
 }
 
 .score-radar-grid {
@@ -8194,6 +8190,22 @@ button:active:not(:disabled),
   color: #6f841b;
   font-size: 13px;
   font-weight: 950;
+}
+
+.score-radar-legend-active {
+  background: rgba(111, 132, 27, 0.08);
+  border-radius: 5px;
+  outline: 1.5px solid rgba(111, 132, 27, 0.3);
+  padding: 1px 4px;
+  margin: -1px -4px;
+}
+
+.score-radar-legend-active small {
+  color: #4a6010;
+}
+
+.score-radar-legend-active b {
+  color: #4a6010;
 }
 
 .comparison-view {
@@ -8275,13 +8287,7 @@ button:active:not(:disabled),
 }
 
 .comparison-card .score-radar {
-  grid-template-columns: 86px minmax(0, 1fr);
   padding: 6px;
-}
-
-.comparison-card .score-radar svg {
-  height: 86px;
-  width: 86px;
 }
 
 .comparison-badges,
@@ -8467,14 +8473,6 @@ button:active:not(:disabled),
     z-index: 80;
   }
 
-  .score-radar {
-    grid-template-columns: 98px minmax(0, 1fr);
-  }
-
-  .score-radar svg {
-    height: 98px;
-    width: 98px;
-  }
 
   .offer-dashboard .quick-decision-card {
     padding: 9px;
@@ -8508,17 +8506,3 @@ button:active:not(:disabled),
   }
 }
 
-@media (max-width: 420px) {
-  .score-radar {
-    grid-template-columns: 86px minmax(0, 1fr);
-  }
-
-  .score-radar svg {
-    height: 86px;
-    width: 86px;
-  }
-
-  .score-radar-legend small {
-    font-size: 9px;
-  }
-}
