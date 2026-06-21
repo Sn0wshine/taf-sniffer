@@ -8357,7 +8357,7 @@ button:active:not(:disabled),
   pointer-events: none;
   position: absolute;
   right: 0;
-  transform: translateY(calc(100% + 6px));
+  transform: translateY(calc(100% - 24px));
   z-index: 20;
 }
 

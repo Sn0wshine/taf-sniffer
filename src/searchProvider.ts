@@ -90,7 +90,7 @@ export const franceTravailProxyProvider: JobSearchProvider = {
       const params = new URLSearchParams({
         keywords: strategy.targetJob || "diagnostiqueur immobilier",
         location: strategy.location || "",
-        limit: "25",
+        limit: "60",
         smartSearch: strategy.smartSearch === false ? "0" : "1",
         smartLocation: strategy.smartLocation === false ? "0" : "1",
         experienceLevel: strategy.experienceLevel || "debutant_reconversion",
@@ -100,7 +100,7 @@ export const franceTravailProxyProvider: JobSearchProvider = {
       (strategy.aiSearchQueries || []).slice(0, 8).forEach((query) => {
         if (query.trim()) params.append("aiKeyword", query.trim());
       });
-      const response = await fetchWithTimeout(`${proxyBase()}/api/search-jobs?${params}`, {}, 5000);
+      const response = await fetchWithTimeout(`${proxyBase()}/api/search-jobs?${params}`, {}, 45000);
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {

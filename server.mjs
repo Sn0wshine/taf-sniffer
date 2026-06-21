@@ -2061,7 +2061,7 @@ function absoluteUrl(url, base) {
 
 async function fetchText(url) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9_000);
+  const timeout = setTimeout(() => controller.abort(), 7_000);
   try {
     const response = await fetch(url, {
       signal: controller.signal,
@@ -2833,21 +2833,25 @@ async function searchPublicSourceOnceReliable(source, keywords, location, perSou
   let skippedCount = 0;
   let poorQualityCount = 0;
 
-  for (const link of detailLinks) {
-    try {
-      const detail = await fetchText(link);
-      if (detail.ok) {
-        const detailUrl = detail.finalUrl || link;
-        const job = parseJobPage(source.name, detailUrl, detail.text);
-        if (isLikelyDetailUrlForSource(source.name, job.sourceUrl || detailUrl) && isImportable(job)) detailJobs.push(job);
-        else {
-          skippedCount += 1;
-          poorQualityCount += 1;
-        }
-      } else {
+  // Les pages de détail sont récupérées en parallèle : sinon chaque source paie
+  // perSourceLimit fetchs en série, ce qui plafonne le nombre d'offres réalistes.
+  const detailResults = await Promise.allSettled(detailLinks.map((link) => fetchText(link)));
+  for (let i = 0; i < detailResults.length; i++) {
+    const settled = detailResults[i];
+    if (settled.status !== "fulfilled") {
+      skippedCount += 1;
+      continue;
+    }
+    const detail = settled.value;
+    if (detail.ok) {
+      const detailUrl = detail.finalUrl || detailLinks[i];
+      const job = parseJobPage(source.name, detailUrl, detail.text);
+      if (isLikelyDetailUrlForSource(source.name, job.sourceUrl || detailUrl) && isImportable(job)) detailJobs.push(job);
+      else {
         skippedCount += 1;
+        poorQualityCount += 1;
       }
-    } catch {
+    } else {
       skippedCount += 1;
     }
   }
@@ -2933,6 +2937,56 @@ async function searchPublicSource(source, queryPairs, perSourceLimit) {
   };
 }
 
+async function fetchOfficialFranceTravailRaw(keywords, location, limit) {
+  const empty = (status, message, networkErrorCount = 0) => ({
+    source: "France Travail",
+    jobs: [],
+    foundCount: 0,
+    detailLinkCount: 0,
+    missingDetailCount: 0,
+    poorQualityCount: 0,
+    networkErrorCount,
+    skippedCount: 0,
+    status,
+    message: `France Travail (API) : ${message}`,
+  });
+  try {
+    const token = await getAccessToken();
+    const params = new URLSearchParams({
+      motsCles: location ? `${keywords} ${location}` : keywords,
+      range: `0-${Math.max(0, Math.min(149, limit - 1))}`,
+    });
+    const response = await fetch(`${API_BASE}${SEARCH_PATH}?${params}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    // 204 = aucune offre ; 206 = résultats partiels (pagination) ; 200 = ok
+    if (response.status === 204) return empty("empty", "aucune offre pour ces critères.");
+    if (!response.ok) {
+      console.log(`[search] France Travail API HTTP ${response.status}`);
+      return empty("blocked", `réponse ${response.status}.`, 1);
+    }
+    const payload = await response.json().catch(() => null);
+    const resultats = Array.isArray(payload?.resultats) ? payload.resultats : Array.isArray(payload) ? payload : [];
+    const jobs = resultats.map(mapOffer).filter((job) => job.rawText.length > 80);
+    return {
+      source: "France Travail",
+      jobs,
+      foundCount: resultats.length,
+      detailLinkCount: jobs.length,
+      missingDetailCount: 0,
+      poorQualityCount: resultats.length - jobs.length,
+      networkErrorCount: 0,
+      skippedCount: resultats.length - jobs.length,
+      status: jobs.length ? "ok" : "empty",
+      message: `France Travail (API) : ${jobs.length} offre${jobs.length > 1 ? "s" : ""}.`,
+    };
+  } catch (error) {
+    const message = error?.message || String(error);
+    console.log(`[search] France Travail API erreur: ${message}`);
+    return empty(error?.code === "missing_credentials" ? "empty" : "blocked", message, error?.code === "missing_credentials" ? 0 : 1);
+  }
+}
+
 async function searchPublicJobs(requestUrl) {
   const startedAt = Date.now();
   const keywords = compact(requestUrl.searchParams.get("keywords") || "diagnostiqueur immobilier");
@@ -2942,8 +2996,11 @@ async function searchPublicJobs(requestUrl) {
   const experienceLevel = compact(requestUrl.searchParams.get("experienceLevel") || "debutant_reconversion");
   const requiredPoei = requestUrl.searchParams.get("requiredPoei") === "1";
   const requiredAudit = requestUrl.searchParams.get("requiredAudit") === "1";
-  const limit = Math.max(1, Math.min(50, Number(requestUrl.searchParams.get("limit") || 25)));
-  const perSourceLimit = Math.max(1, Math.ceil(limit / PUBLIC_SOURCES.length));
+  const limit = Math.max(1, Math.min(80, Number(requestUrl.searchParams.get("limit") || 25)));
+  // Plusieurs sources sont bloquées (403) ou vides : on donne à chaque source un quota
+  // généreux pour que les sources qui répondent remplissent le total visé (limit),
+  // sans exploser la latence (chaque offre = 1 fetch de page détail).
+  const perSourceLimit = Math.max(8, Math.ceil(limit / 6));
   const aiKeywords = unique(requestUrl.searchParams.getAll("aiKeyword").map((keyword) => compact(keyword)).filter(Boolean)).slice(0, 8);
   const localKeywordVariants = unique(
     buildKeywordVariants(keywords, smartSearch, experienceLevel).flatMap((keyword) =>
@@ -2956,12 +3013,20 @@ async function searchPublicJobs(requestUrl) {
   const keywordVariants = unique([...aiKeywordVariants, ...localKeywordVariants]);
   const locationVariants = buildLocationVariants(location, smartLocation);
   const queryPairs = buildQueryPairs(keywordVariants, locationVariants);
-  const reports = await Promise.allSettled(PUBLIC_SOURCES.map((source) => searchPublicSource(source, queryPairs, perSourceLimit)));
-  const sourceReports = reports.map((report, index) => {
-    const value = report.status === "fulfilled"
+  const useOfficial = configured();
+  const officialRaw = useOfficial ? await fetchOfficialFranceTravailRaw(keywords, location, limit) : null;
+  const scrapeSources = useOfficial
+    ? PUBLIC_SOURCES.filter((source) => !normalized(source.name).includes("france travail"))
+    : PUBLIC_SOURCES;
+  console.log(`[search] "${keywords}"${location ? ` @ ${location}` : ""} — ${queryPairs.length} paires de requêtes, limit=${limit}, perSource=${perSourceLimit}, FT_API=${useOfficial ? "on" : "off (credentials manquants)"}`);
+  const reports = await Promise.allSettled(scrapeSources.map((source) => searchPublicSource(source, queryPairs, perSourceLimit)));
+  const rawValues = [];
+  if (officialRaw) rawValues.push(officialRaw);
+  reports.forEach((report, index) => {
+    rawValues.push(report.status === "fulfilled"
       ? report.value
       : {
-          source: PUBLIC_SOURCES[index].name,
+          source: scrapeSources[index].name,
           jobs: [],
           skippedCount: 0,
           foundCount: 0,
@@ -2970,8 +3035,10 @@ async function searchPublicJobs(requestUrl) {
           poorQualityCount: 0,
           networkErrorCount: isNetworkError(report.reason) ? 1 : 0,
           status: "blocked",
-          message: `${PUBLIC_SOURCES[index].name} : ${isNetworkError(report.reason) ? shortNetworkError(report.reason) : "lecture impossible"}.`,
-        };
+          message: `${scrapeSources[index].name} : ${isNetworkError(report.reason) ? shortNetworkError(report.reason) : "lecture impossible"}.`,
+        });
+  });
+  const sourceReports = rawValues.map((value) => {
     const strictJobs = value.jobs.filter((job) => matchesRequiredSignals(job, requiredPoei, requiredAudit));
     const strictSkipped = value.jobs.length - strictJobs.length;
     const requirementMessage = strictSkipped
@@ -2998,6 +3065,18 @@ async function searchPublicJobs(requestUrl) {
       })}${requirementMessage}`,
     };
   });
+  for (const r of sourceReports) {
+    const flag = r.status === "blocked" ? "✗" : r.jobs.length ? "✓" : "—";
+    const parts = [
+      r.jobs.length ? `${r.jobs.length} ok` : null,
+      r.foundCount ? `${r.foundCount} trouvées` : null,
+      Number(r.skippedCount) ? `${r.skippedCount} écartées` : null,
+      Number(r.poorQualityCount) ? `${r.poorQualityCount} basse qualité` : null,
+      Number(r.missingDetailCount) ? `${r.missingDetailCount} sans détail` : null,
+      Number(r.networkErrorCount) ? `RÉSEAU ERR` : null,
+    ].filter(Boolean).join(" · ");
+    console.log(`  ${flag} ${r.source.padEnd(22)} ${parts || r.status}`);
+  }
   const seen = new Set();
   const jobs = sourceReports
     .flatMap((report) => report.jobs)
@@ -3063,6 +3142,7 @@ async function searchPublicJobs(requestUrl) {
         ? `${jobs.length} offre${jobs.length > 1 ? "s" : ""} trouvée${jobs.length > 1 ? "s" : ""} sur les sites publics.`
         : "Aucune offre lisible automatiquement. Les sites peuvent bloquer la lecture automatique ; l’import manuel reste disponible.",
   };
+  console.log(`[search] => ${jobs.length} offres au total en ${Date.now() - startedAt}ms (réseau: ${result.networkStatus || "ok"})`);
   writeDiagnostic("search", {
     action: "public-search",
     status: result.status,

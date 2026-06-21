@@ -1,4 +1,5 @@
-﻿import { useEffect, useId, useMemo, useRef, useState } from "react";
+﻿import { createPortal } from "react-dom";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, RefObject } from "react";
 import {
   AlertTriangle,
@@ -86,7 +87,7 @@ const defaultStrategy: Strategy = {
   salaryMin: 0,
   experienceLevel: "debutant_reconversion",
   contractPreference: "any",
-  hideWeakOffers: true,
+  hideWeakOffers: false,
   poeiRequirement: "prefer",
   auditRequirement: "prefer",
   independentRequirement: "prefer",
@@ -1382,15 +1383,18 @@ function InfoTooltip({
   return (
     <span className="info-chip-wrap" ref={wrapRef} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
       {children(tooltipId)}
-      <span
-        className={`info-tooltip ${visible ? "is-visible" : ""}`}
-        id={tooltipId}
-        ref={tooltipRef}
-        role="tooltip"
-        style={style}
-      >
-        {tooltip}
-      </span>
+      {createPortal(
+        <span
+          className={`info-tooltip ${visible ? "is-visible" : ""}`}
+          id={tooltipId}
+          ref={tooltipRef}
+          role="tooltip"
+          style={style}
+        >
+          {tooltip}
+        </span>,
+        document.body
+      )}
     </span>
   );
 }
@@ -2291,7 +2295,7 @@ const normalizeStrategy = (value: unknown): Strategy => {
       candidate.contractPreference === "alternance"
         ? candidate.contractPreference
         : defaultStrategy.contractPreference,
-    hideWeakOffers: candidate.hideWeakOffers !== false,
+    hideWeakOffers: candidate.hideWeakOffers === true,
     poeiRequirement,
     auditRequirement,
     independentRequirement,
@@ -2641,6 +2645,7 @@ export function App() {
       (!strategy.hideWeakOffers || evaluateDecisionFit(analysis, strategy).fit !== "weak"),
   ).length;
   const exploreCount = jobs.filter((job) => !job.ignored && normalizeReviewStatus(job) === "a_creuser").length;
+  const favoriteCount = jobs.filter((job) => job.favorite).length;
   const ignoredCount = jobs.filter((job) => job.ignored).length;
   const topThree = eligibleAnalyses.slice(0, 3);
   const activeProfile = getActiveProfile(strategy);
@@ -2831,10 +2836,20 @@ export function App() {
     );
   };
 
-  const handleRankSwipe = (id: string, action: SwipeRankAction) => {
-    updateJob(id, reviewPatch(action === "explore" ? "a_creuser" : "ignoree"));
+  const handleRankSwipe = (id: string, action: SwipeRankAction, currentStatus: ReviewStatus) => {
+    let newStatus: ReviewStatus;
+    if (action === "explore") {
+      newStatus = currentStatus === "a_creuser" ? "favori" : "a_creuser";
+    } else {
+      newStatus = "ignoree";
+    }
+    updateJob(id, reviewPatch(newStatus));
     if (selectedId === id) setSelectedId(null);
-    setStatusMessage(action === "explore" ? "Offre gardée pour plus tard." : "Offre envoyée dans les ignorées.");
+    setStatusMessage(
+      action === "explore"
+        ? newStatus === "favori" ? "Offre ajoutée aux favoris." : "Offre gardée pour plus tard."
+        : "Offre envoyée dans les ignorées."
+    );
   };
 
   const fetchCompanyProfile = async (company: string, companyType: string) => {
@@ -4015,6 +4030,7 @@ export function App() {
                 <input
                   type="number"
                   min={0}
+                  placeholder="peu importe"
                   value={strategy.salaryMin || ""}
                   onChange={(event) => setStrategy({ ...strategy, salaryMin: Number(event.target.value) })}
                 />
@@ -4358,22 +4374,22 @@ export function App() {
             </HelpTooltip>
             <HelpTooltip tooltip="À creuser : offres gardées pour vérification, appel recruteur ou comparaison plus fine.">
               <button className={filter === "to_explore" ? "active" : ""} onClick={() => setFilter("to_explore")}>
-                À creuser
+                À creuser <span className="filter-count">{exploreCount}</span>
               </button>
             </HelpTooltip>
             <HelpTooltip tooltip="Favoris : offres que tu considères comme sérieuses ou prioritaires.">
               <button className={filter === "favorites" ? "active" : ""} onClick={() => setFilter("favorites")}>
-                Favoris
+                Favoris <span className="filter-count">{favoriteCount}</span>
               </button>
             </HelpTooltip>
             <HelpTooltip tooltip="Ignorées : offres écartées du tri courant, mais pas supprimées.">
               <button className={filter === "ignored" ? "active" : ""} onClick={() => setFilter("ignored")}>
-                Ignorées
+                Ignorées <span className="filter-count">{ignoredCount}</span>
               </button>
             </HelpTooltip>
             <HelpTooltip tooltip="Toutes : affiche toutes les offres, y compris celles déjà marquées ou moins pertinentes.">
               <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-                Toutes
+                Toutes <span className="filter-count">{jobs.length}</span>
               </button>
             </HelpTooltip>
           </div>
@@ -4395,7 +4411,8 @@ export function App() {
                     key={job.id}
                     selected={selected?.job.id === job.id}
                     onSelect={() => selectOffer(job.id)}
-                    onSwipe={(action) => handleRankSwipe(job.id, action)}
+                    currentStatus={status}
+                    onSwipe={(action) => handleRankSwipe(job.id, action, status)}
                   >
                     <span className="rank-index">#{index + 1}</span>
                     <InfoChip
@@ -4489,11 +4506,13 @@ function SwipeRankCard({
   selected,
   onSelect,
   onSwipe,
+  currentStatus,
   children,
 }: {
   selected: boolean;
   onSelect: () => void;
   onSwipe: (action: SwipeRankAction) => void;
+  currentStatus?: ReviewStatus;
   children: ReactNode;
 }) {
   const [dragX, setDragX] = useState(0);
@@ -4562,8 +4581,8 @@ function SwipeRankCard({
   return (
     <div className={`rank-swipe-shell ${swipeAction ? `swipe-${swipeAction}` : ""}`}>
       <div className="rank-swipe-action keep" aria-hidden="true">
-        <ListFilter size={16} />
-        <span>À creuser</span>
+        {currentStatus === "a_creuser" ? <Star size={16} /> : <ListFilter size={16} />}
+        <span>{currentStatus === "a_creuser" ? "Favori" : "À creuser"}</span>
       </div>
       <div className="rank-swipe-action ignore" aria-hidden="true">
         <Trash2 size={16} />
@@ -5242,6 +5261,7 @@ function SimpleSearchPanel({
                     type="number"
                     min={0}
                     step={50}
+                    placeholder="peu importe"
                     value={strategy.salaryMin || ""}
                     onChange={(event) => onUpdateStrategy({ salaryMin: Number(event.target.value) })}
                     onKeyDown={handleEnterAdvance}
@@ -5565,7 +5585,7 @@ function SimpleSearchPanel({
                     </div>
                   </div>
                 )}
-                {showDebugInfo && sourceReports.length > 0 && (
+                {sourceReports.length > 0 && (
                   <div className="search-debug-details">
                     <strong>Détails par source</strong>
                     <div className="source-report-list">
