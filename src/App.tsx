@@ -60,6 +60,7 @@ import type {
   ValidationTag,
   AIReview,
   ControlledExtractionValues,
+  ControlledExtractionField,
   AIMode,
 } from "./types";
 
@@ -6982,6 +6983,53 @@ function ExtractedInfoValue({ label, value }: { label: string; value?: string })
   );
 }
 
+function ExtractedFieldBadges({
+  label,
+  fieldMeta,
+  showDebugInfo,
+  analysis,
+}: {
+  label: string;
+  fieldMeta?: ControlledExtractionField;
+  showDebugInfo: boolean;
+  analysis: JobAnalysis;
+}) {
+  return (
+    <>
+      {fieldMeta?.source === "ai" && (
+        <InfoChip className="field-source-chip ai" tooltip={extractionSourceTooltip("ai")}>
+          IA
+        </InfoChip>
+      )}
+      {showDebugInfo && fieldMeta && fieldMeta.source !== "ai" && (
+        <InfoChip className={`field-source-chip ${fieldMeta.source}`} tooltip={extractionSourceTooltip(fieldMeta.source)}>
+          {extractionSourceLabel(fieldMeta.source)}
+        </InfoChip>
+      )}
+      {fieldMeta?.quality === "verify" && (
+        <InfoChip className="field-quality-chip verify" tooltip={fieldQualityTooltip("verify", fieldMeta.reason)}>
+          à vérifier
+        </InfoChip>
+      )}
+      {fieldMeta?.quality === "conflict" && (
+        <InfoChip className="field-quality-chip conflict" tooltip={fieldQualityTooltip("conflict", fieldMeta.reason)}>
+          conflit IA
+        </InfoChip>
+      )}
+      {label === "Entreprise" && (
+        <InfoChip className="company-type-chip" tooltip={companyTypeTooltip(companyTypeDisplay(analysis.companyType))}>
+          {companyTypeDisplay(analysis.companyType)}
+        </InfoChip>
+      )}
+      {label === "Expérience demandée" && (
+        <InfoChip className={`experience-fit-chip ${analysis.experienceFit}`} tooltip={experienceFitTooltip(analysis.experienceFit)}>
+          {experienceFitLabel(analysis.experienceFit)}
+        </InfoChip>
+      )}
+    </>
+  );
+}
+
 function CompanyProfileCard({ profile }: { profile: CompanyProfile }) {
   return (
     <div className={`company-profile-card ${profile.status}`}>
@@ -7007,6 +7055,8 @@ function CompanyProfileCard({ profile }: { profile: CompanyProfile }) {
     </div>
   );
 }
+
+const QUICK_FACT_LABELS = ["Lieu", "Contrat", "Expérience demandée", "Temps de travail"];
 
 const extractionFieldForLabel = (label: string): keyof ControlledExtractionValues | undefined => {
   const map: Partial<Record<string, keyof ControlledExtractionValues>> = {
@@ -7283,6 +7333,8 @@ function OfferDetail({
     : mode === "assistant"
       ? assistantExtractedInfo
       : extractedInfo;
+  const quickFacts = visibleExtractedInfo.filter(([label]) => QUICK_FACT_LABELS.includes(label));
+  const detailFacts = visibleExtractedInfo.filter(([label]) => !QUICK_FACT_LABELS.includes(label));
   const displayedSalaryKind = salaryKindDisplay(analysis.salaryKind);
   const salaryFieldMeta = controlled.fields.salary;
   const salaryMetrics: Array<[string, string | undefined]> = [
@@ -7656,76 +7708,71 @@ function OfferDetail({
             </div>
           </>
         ) : (
-          <div className="extracted-info-grid">
-            {visibleExtractedInfo.map(([label, value]) => {
-              const fieldKey = extractionFieldForLabel(label);
-              const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
-              return (
-                <div className={`extracted-info-item field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
-                  <strong className="extracted-info-label">
-                    <span>{label}</span>
-                  </strong>
-                  <ExtractedInfoValue label={label} value={value} />
-                  <div className="extracted-info-badges">
-                    {fieldMeta?.source === "ai" && (
-                      <InfoChip className="field-source-chip ai" tooltip={extractionSourceTooltip("ai")}>
-                        IA
-                      </InfoChip>
-                    )}
-                    {showDebugInfo && fieldMeta && fieldMeta.source !== "ai" && (
-                      <InfoChip className={`field-source-chip ${fieldMeta.source}`} tooltip={extractionSourceTooltip(fieldMeta.source)}>
-                        {extractionSourceLabel(fieldMeta.source)}
-                      </InfoChip>
-                    )}
-                    {fieldMeta?.quality === "verify" && (
-                      <InfoChip className="field-quality-chip verify" tooltip={fieldQualityTooltip("verify", fieldMeta.reason)}>
-                        à vérifier
-                      </InfoChip>
-                    )}
-                    {fieldMeta?.quality === "conflict" && (
-                      <InfoChip className="field-quality-chip conflict" tooltip={fieldQualityTooltip("conflict", fieldMeta.reason)}>
-                        conflit IA
-                      </InfoChip>
-                    )}
-                    {label === "Entreprise" && (
-                      <InfoChip className="company-type-chip" tooltip={companyTypeTooltip(companyTypeDisplay(analysis.companyType))}>
-                        {companyTypeDisplay(analysis.companyType)}
-                      </InfoChip>
-                    )}
-                    {label === "Expérience demandée" && (
-                      <InfoChip className={`experience-fit-chip ${analysis.experienceFit}`} tooltip={experienceFitTooltip(analysis.experienceFit)}>
-                        {experienceFitLabel(analysis.experienceFit)}
-                      </InfoChip>
-                    )}
-                  </div>
-                  {showDebugInfo && fieldMeta && fieldMeta.quality !== "ok" && fieldMeta.reason && (
-                    <small className="field-quality-reason">{fieldMeta.reason}</small>
-                  )}
-                  {label === "Entreprise" && canIdentifyCompany && (mode === "advanced" || showDebugInfo) && (
-                    <div className="company-profile-actions">
-                      {companyLoading ? (
-                        <span className="company-profile-loading">Identification...</span>
-                      ) : companyProfileVisible ? (
-                        <CompanyProfileCard profile={companyProfile!} />
-                      ) : (
-                        <button className="ghost-button compact" onClick={onIdentifyCompany}>
-                          Identifier
-                        </button>
-                      )}
-                      {(companyProfile?.status === "error" || companyProfile?.status === "not_found") && !companyLoading && (
-                        <button className="ghost-button compact" onClick={onIdentifyCompany}>
-                          Réessayer
-                        </button>
-                      )}
-                      <a className="company-search-link" href={analysis.companySearchUrl} target="_blank" rel="noopener noreferrer">
-                        Vérifier sur le web
-                      </a>
+          <>
+            {quickFacts.length > 0 && (
+              <div className="extracted-info-quickstrip">
+                {quickFacts.map(([label, value]) => {
+                  const fieldKey = extractionFieldForLabel(label);
+                  const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
+                  return (
+                    <div className={`quickfact field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
+                      <span className="quickfact-label">{label}</span>
+                      <span className="quickfact-value">{value || "Non détecté"}</span>
+                      <div className="quickfact-badges">
+                        <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+            {detailFacts.length > 0 && (
+              <div className="extracted-info-table">
+                {detailFacts.map(([label, value]) => {
+                  const fieldKey = extractionFieldForLabel(label);
+                  const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
+                  const showCompanyActions = label === "Entreprise" && canIdentifyCompany && (mode === "advanced" || showDebugInfo);
+                  return (
+                    <div className={`eit-block field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
+                      <div className="eit-row">
+                        <span className="eit-label">{label}</span>
+                        <div className="eit-value">
+                          <ExtractedInfoValue label={label} value={value} />
+                        </div>
+                        <div className="eit-badges">
+                          <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
+                        </div>
+                      </div>
+                      {showDebugInfo && fieldMeta && fieldMeta.quality !== "ok" && fieldMeta.reason && (
+                        <small className="field-quality-reason eit-reason">{fieldMeta.reason}</small>
+                      )}
+                      {showCompanyActions && (
+                        <div className="company-profile-actions eit-company">
+                          {companyLoading ? (
+                            <span className="company-profile-loading">Identification...</span>
+                          ) : companyProfileVisible ? (
+                            <CompanyProfileCard profile={companyProfile!} />
+                          ) : (
+                            <button className="ghost-button compact" onClick={onIdentifyCompany}>
+                              Identifier
+                            </button>
+                          )}
+                          {(companyProfile?.status === "error" || companyProfile?.status === "not_found") && !companyLoading && (
+                            <button className="ghost-button compact" onClick={onIdentifyCompany}>
+                              Réessayer
+                            </button>
+                          )}
+                          <a className="company-search-link" href={analysis.companySearchUrl} target="_blank" rel="noopener noreferrer">
+                            Vérifier sur le web
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </section>
 

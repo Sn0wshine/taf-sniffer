@@ -2994,6 +2994,115 @@ textarea:focus {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Bande compacte : champs toujours courts (Lieu, Contrat, Expérience, Temps de travail) */
+.extracted-info-quickstrip {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.quickfact {
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 9px;
+}
+
+.quickfact-label {
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.quickfact-value {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.quickfact-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.quickfact-badges:empty {
+  display: none;
+}
+
+/* Table « tableur » : infos secondaires / longues */
+.extracted-info-table {
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.eit-block + .eit-block {
+  border-top: 1px solid var(--line-soft);
+}
+
+.eit-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(110px, 150px) minmax(0, 1fr) auto;
+  padding: 7px 10px;
+}
+
+.eit-label {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.eit-value {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.24;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.eit-value .extracted-info-value {
+  font-size: 13px;
+}
+
+.eit-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.eit-badges:empty {
+  display: none;
+}
+
+.eit-reason {
+  display: block;
+  padding: 0 10px 7px;
+}
+
+.eit-company {
+  padding: 0 10px 8px;
+}
+
 .salary-normalized-panel {
   background: linear-gradient(180deg, #f8fffd 0%, #ffffff 100%);
   border: 1px solid rgba(6, 117, 111, 0.18);
@@ -7207,6 +7316,23 @@ button:active:not(:disabled),
   }
 
   .extracted-info-badges {
+    justify-content: flex-start;
+  }
+
+  .extracted-info-quickstrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eit-row {
+    gap: 3px 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .eit-label {
+    grid-column: 1 / -1;
+  }
+
+  .eit-badges {
     justify-content: flex-start;
   }
 
