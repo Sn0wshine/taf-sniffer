@@ -7909,14 +7909,17 @@ button:active:not(:disabled),
 
 .dashboard-action-row {
   align-items: center;
-  background: rgba(248, 250, 252, 0.78);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(248, 250, 252, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 12px;
+  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
   margin: 0;
   padding: 8px;
+  position: sticky;
+  z-index: 10;
 }
 
 .dashboard-action-row .ghost-button,
@@ -8279,13 +8282,13 @@ button:active:not(:disabled),
   fill: rgba(6, 117, 111, 0.18);
   stroke: var(--teal);
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.2;
 }
 
 .score-radar-dot {
   fill: #ffffff;
   stroke: var(--teal);
-  stroke-width: 1.6;
+  stroke-width: 1.2;
 }
 
 .score-radar-legend {

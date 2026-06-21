@@ -7465,7 +7465,6 @@ function OfferDetail({
             </div>
           )}
 
-          {actionBar}
         </div>
 
         <aside className="offer-dashboard-score" aria-label="Scores de l'offre">
@@ -7883,6 +7882,7 @@ function OfferDetail({
           </details>}
         </>
       )}
+      {actionBar}
     </article>
   );
 }
