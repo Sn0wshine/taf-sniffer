@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Copy,
   Download,
+  ExternalLink,
   Eye,
   FilePlus2,
   ListFilter,
@@ -1211,7 +1212,7 @@ const isSearchResultUrl = (url?: string) => {
     /meteojob\.com\/jobs\?/i,
     /welcometothejungle\.com\/fr\/jobs\?/i,
     /jobijoba\.com\/fr\/query/i,
-    /jobijoba\.com\/fr\/emploi(?:\/|$)/i,
+    /jobijoba\.com\/fr\/emploi(?:\?|$)/i,
     /talent\.com\/jobs\?/i,
     /optioncarriere\.com\/recherche\/emplois/i,
   ].some((pattern) => pattern.test(value));
@@ -7374,6 +7375,12 @@ function OfferDetail({
         <Eye size={16} aria-hidden="true" />
         {job.ignored ? "Restaurer" : "Ignorer"}
       </button>
+      {job.sourceUrl && !isSearchResultUrl(job.sourceUrl) && (
+        <a className="ghost-button compact" href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+          <ExternalLink size={16} aria-hidden="true" />
+          Ouvrir l'offre
+        </a>
+      )}
     </div>
   );
 
@@ -7469,11 +7476,9 @@ function OfferDetail({
         </div>
 
         <aside className="offer-dashboard-score" aria-label="Scores de l'offre">
-          <div className="dashboard-score-head">
-            <div>
-              <span>{scoreLabel}</span>
-              <strong>{scoreValue}</strong>
-            </div>
+          <ScoreRadar analysis={analysis} activeProfile={activeProfile} />
+          <div className="dashboard-score-corner">
+            <span>{scoreLabel}</span>
             <InfoChip
               className={`${scoreClass(scoreValue)} ${aiRankScore !== null ? "ai-rank-score" : ""}`}
               tooltip={aiRankScore !== null ? "Score de classement Gemini utilisé en mode IA." : "Score final de l'offre : règles locales, corrections et éventuel ajustement IA borné."}
@@ -7481,7 +7486,6 @@ function OfferDetail({
               {scoreValue}
             </InfoChip>
           </div>
-          <ScoreRadar analysis={analysis} activeProfile={activeProfile} />
         </aside>
       </section>
 
