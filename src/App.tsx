@@ -7482,19 +7482,6 @@ function OfferDetail({
             </InfoChip>
           </div>
           <ScoreRadar analysis={analysis} activeProfile={activeProfile} />
-          <ScoreMetrics analysis={analysis} activeProfile={activeProfile} className="headline-score-grid dashboard-score-grid" />
-          <div className="dashboard-score-meta">
-            <InfoChip className={confidenceClass(analysis.scoreConfidence)} tooltip={confidenceTooltip(analysis.scoreConfidence)}>
-              Confiance {analysis.scoreConfidence}
-            </InfoChip>
-            {aiRankScore !== null && <span>local {analysis.scores.global}/100</span>}
-            {analysis.aiScoreAdjustment !== 0 && (
-              <span>
-                local {analysis.localScore} {analysis.aiScoreAdjustment > 0 ? "+" : ""}{analysis.aiScoreAdjustment} IA
-              </span>
-            )}
-            {mode === "advanced" && <span>{analysis.verdict}</span>}
-          </div>
         </aside>
       </section>
 

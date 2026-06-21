@@ -4192,23 +4192,43 @@ textarea:focus {
 }
 
 .detail-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
 }
 
-.detail-panel > .offer-detail {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
+/* Desktop deux-colonnes + offre selectionnee : le panneau offre est borne au
+   viewport et epingle (comme la colonne classement), le contenu de l'offre
+   scrolle, et la barre d'actions reste collee en bas.
+   .main-panel passe en overflow:visible ici pour que la fenetre redevienne le
+   conteneur de scroll (sinon son overflow:hidden neutralise le sticky). */
+@media (min-width: 901px) {
+  .workspace.result-focused .main-panel {
+    overflow: visible;
+  }
 
-.detail-panel > .dashboard-action-row {
-  flex-shrink: 0;
-  border-radius: 0 0 12px 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.22);
-  margin: 0;
+  .workspace.result-focused .detail-panel {
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 82px);
+    overflow: hidden;
+    position: sticky;
+    top: 14px;
+  }
+
+  .workspace.result-focused .detail-panel > .offer-detail {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+  }
+
+  .workspace.result-focused .detail-panel > .dashboard-action-row {
+    flex-shrink: 0;
+    border-radius: 0 0 12px 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    margin: 0;
+  }
 }
 
 .empty-state {
@@ -8295,13 +8315,11 @@ button:active:not(:disabled),
   fill: rgba(6, 117, 111, 0.18);
   stroke: var(--teal);
   stroke-linejoin: round;
-  stroke-width: 1.2;
+  stroke-width: 0.8;
 }
 
 .score-radar-dot {
-  fill: #ffffff;
-  stroke: var(--teal);
-  stroke-width: 1.2;
+  display: none;
 }
 
 .score-radar-legend {
