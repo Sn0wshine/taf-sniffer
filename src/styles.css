@@ -4192,7 +4192,23 @@ textarea:focus {
 }
 
 .detail-panel {
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-panel > .offer-detail {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.detail-panel > .dashboard-action-row {
+  flex-shrink: 0;
+  border-radius: 0 0 12px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  margin: 0;
 }
 
 .empty-state {
@@ -7912,14 +7928,11 @@ button:active:not(:disabled),
   background: rgba(248, 250, 252, 0.96);
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 12px;
-  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
   margin: 0;
   padding: 8px;
-  position: sticky;
-  z-index: 10;
 }
 
 .dashboard-action-row .ghost-button,

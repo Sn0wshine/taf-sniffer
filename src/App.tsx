@@ -7403,6 +7403,7 @@ function OfferDetail({
   };
 
   return (
+    <>
     <article className={`offer-detail ${mode === "assistant" ? "simple-detail" : ""}`}>
       <section className="offer-dashboard" aria-label="Synthèse de l'offre">
         <div className="offer-dashboard-main">
@@ -7882,8 +7883,9 @@ function OfferDetail({
           </details>}
         </>
       )}
-      {actionBar}
     </article>
+    {actionBar}
+    </>
   );
 }
 
