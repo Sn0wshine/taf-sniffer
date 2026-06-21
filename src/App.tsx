@@ -7919,11 +7919,11 @@ function ScoreRadar({
 }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const axes = [
-    { label: "Formation", value: analysis.scores.formationFacilitee ?? analysis.scores.training },
-    { label: "Salaire", value: analysis.scores.salaryPackage ?? analysis.scores.cashflow },
-    { label: activeProfile.ui.trajectoryScoreLabel, value: analysis.scores.trajectory },
-    { label: "Employeur", value: analysis.scores.employer ?? analysis.scores.audit },
-    { label: "Risque", value: analysis.scores.risk },
+    { label: "Formation", value: analysis.scores.formationFacilitee ?? analysis.scores.training, tooltip: "Formation facilitée : POEI, POE, AFPR, formation employeur, CPF ou certification financée détectés dans l'offre." },
+    { label: "Salaire", value: analysis.scores.salaryPackage ?? analysis.scores.cashflow, tooltip: "Salaire / package : adéquation du salaire annoncé avec ton objectif, plus primes, avantages et statut." },
+    { label: activeProfile.ui.trajectoryScoreLabel, value: analysis.scores.trajectory, tooltip: "Trajectoire : cohérence du poste avec ton projet — intitulé, missions terrain, progression possible." },
+    { label: "Employeur", value: analysis.scores.employer ?? analysis.scores.audit, tooltip: "Employeur : signaux sur la solidité, le sérieux et l'adéquation de la structure avec ton projet." },
+    { label: "Risque", value: analysis.scores.risk, tooltip: "Risque maîtrisé : absence de pièges — statut imposé, variable dominant, salaire flou ou exigences bloquantes." },
   ];
   const center = 50;
   const maxRadius = 30;
@@ -8010,6 +8010,11 @@ function ScoreRadar({
           );
         })}
       </svg>
+    {hoveredIdx !== null && (
+      <div className="radar-axis-tooltip">
+        {axes[hoveredIdx].tooltip}
+      </div>
+    )}
     </div>
   );
 }
