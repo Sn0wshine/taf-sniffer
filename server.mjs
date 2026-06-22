@@ -34,6 +34,19 @@ const MIME_TYPES = {
 const USER_AGENT =
   env.TAF_SNIFFER_USER_AGENT ||
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36 TafSniffer/0.1";
+// Pool d'User-Agents pour le retry des pages de recherche : certaines sources renvoient
+// 403 sur un UA et passent sur un autre. On alterne au 2e essai.
+const USER_AGENTS = [
+  USER_AGENT,
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+];
+const pickUserAgent = (attempt = 0) => USER_AGENTS[attempt % USER_AGENTS.length];
+// Cooldown mémoire des sources qui renvoient un blocage HTTP (403/429) : on évite de
+// re-marteler Indeed/Jooble à chaque recherche pendant quelques minutes.
+const sourceCooldownUntil = new Map();
+const SOURCE_COOLDOWN_MS = 5 * 60 * 1000;
 const PUBLIC_SOURCES = [
   {
     name: "France Travail",
@@ -477,11 +490,24 @@ function buildLocationVariants(location, smartLocation = true) {
   return unique([value, stripAccents(value)]);
 }
 
+function interleave(a, b) {
+  const out = [];
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i += 1) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+
 function buildQueryPairs(keywords, locations) {
   const mainLocation = locations[0] || "";
+  // 6 mots-clés (au lieu de 4) sur le lieu principal + jusqu'à 3 lieux secondaires
+  // sur le 1er mot-clé. La boucle par source s'arrête dès que perSourceLimit est
+  // atteint, donc élargir ici ne coûte de la latence que sur les sources peu fournies.
   const pairs = [
-    ...keywords.slice(0, 4).map((keyword) => ({ keywords: keyword, location: mainLocation })),
-    ...locations.slice(1, 5).map((location) => ({ keywords: keywords[0], location })),
+    ...keywords.slice(0, 6).map((keyword) => ({ keywords: keyword, location: mainLocation })),
+    ...locations.slice(1, 4).map((location) => ({ keywords: keywords[0], location })),
   ];
   return pairs.filter((pair, index, list) =>
     list.findIndex((item) => item.keywords === pair.keywords && item.location === pair.location) === index,
@@ -2128,14 +2154,14 @@ function absoluteUrl(url, base) {
   }
 }
 
-async function fetchText(url) {
+async function fetchText(url, { userAgent = USER_AGENT } = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7_000);
+  const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": USER_AGENT,
+        "User-Agent": userAgent,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
       },
@@ -2145,6 +2171,22 @@ async function fetchText(url) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Page de recherche uniquement (1 par paire, pas les pages détail) : 1 retry avec un
+// User-Agent différent si la 1re tentative est bloquée (403/429) ou échoue réseau.
+async function fetchSearchPage(url) {
+  let last = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      last = await fetchText(url, { userAgent: pickUserAgent(attempt) });
+      if (last.ok || (last.status !== 403 && last.status !== 429)) return last;
+    } catch (error) {
+      last = null;
+      if (attempt === 1) throw error;
+    }
+  }
+  return last;
 }
 
 function shortNetworkError(error) {
@@ -2882,7 +2924,7 @@ async function searchPublicSourceOnceReliable(source, keywords, location, perSou
   }
 
   const searchUrl = source.searchUrl(keywords, location);
-  const searchPage = await fetchText(searchUrl);
+  const searchPage = await fetchSearchPage(searchUrl);
   if (!searchPage.ok) {
     return {
       source: source.name,
@@ -2897,7 +2939,12 @@ async function searchPublicSourceOnceReliable(source, keywords, location, perSou
     };
   }
 
-  const detailLinks = extractLinks(searchPage.text, source, searchPage.finalUrl || searchUrl, perSourceLimit);
+  // On extrait plus de liens que le quota visé : beaucoup de pages détail échouent
+  // au filtre isImportable (description vide, SPA, 403). Le buffer compense ces pertes
+  // au lieu de plafonner à perSourceLimit liens — les fetchs étant parallèles, le
+  // surcoût latence est nul. La liste de jobs gardés reste cappée en aval.
+  const linkBudget = Math.min(28, perSourceLimit + 8);
+  const detailLinks = extractLinks(searchPage.text, source, searchPage.finalUrl || searchUrl, linkBudget);
   const detailJobs = [];
   let skippedCount = 0;
   let poorQualityCount = 0;
@@ -2968,8 +3015,16 @@ async function searchPublicSource(source, queryPairs, perSourceLimit) {
   let missingDetailCount = 0;
   let poorQualityCount = 0;
 
-  for (const pair of queryPairs) {
+  // Plafond de paires par source : les sources qui remplissent leur quota cassent tôt
+  // sur la condition perSourceLimit ; mais une source partielle (ex. Apec à 9 offres)
+  // n'atteint jamais le quota et grinderait les 9 paires × ~7 s en série. Comme les
+  // sources rapides débordent déjà le limit global, plafonner ici ne coûte ~rien au
+  // total final mais borne la latence du long pole.
+  const pairsForSource = queryPairs.slice(0, 3);
+  let pairsTried = 0;
+  for (const pair of pairsForSource) {
     if (jobs.length >= perSourceLimit) break;
+    pairsTried += 1;
     const result = await searchPublicSourceOnceReliable(source, pair.keywords, pair.location, Math.max(1, perSourceLimit - jobs.length));
     skippedCount += Number(result.skippedCount || 0);
     foundCount += Number(result.foundCount || 0);
@@ -2986,9 +3041,14 @@ async function searchPublicSource(source, queryPairs, perSourceLimit) {
       }
       if (jobs.length >= perSourceLimit) break;
     }
+
+    // Source improductive (SPA, détails vides, throttling) : inutile d'épuiser les 9
+    // paires en série à ~7 s chacune. Si rien n'est ressorti après 2 paires, on abandonne
+    // cette source — c'est ce qui faisait grimper la latence à 60 s+.
+    if (jobs.length === 0 && pairsTried >= 2) break;
   }
 
-  const status = jobs.length ? "ok" : blockedCount === queryPairs.length ? "blocked" : "empty";
+  const status = jobs.length ? "ok" : pairsTried > 0 && blockedCount === pairsTried ? "blocked" : "empty";
   return {
     source: source.name,
     jobs,
@@ -3006,7 +3066,38 @@ async function searchPublicSource(source, queryPairs, perSourceLimit) {
   };
 }
 
-async function fetchOfficialFranceTravailRaw(keywords, location, limit) {
+// L'API officielle FT accepte un filtre géo structuré (departement / commune) bien plus
+// fiable que de noyer le lieu dans motsCles. On extrait un code département d'un code
+// postal ou d'un numéro de département présent dans le libellé ; sinon on garde le
+// libellé en mots-clés (villes sans code : « Lyon », « Paris »…).
+function franceTravailGeoParams(location) {
+  const value = compact(location || "");
+  if (!value) return { departement: "", keepInKeywords: "" };
+  const flat = normalized(value);
+  if (flat === "toute la france" || flat === "france entiere" || flat === "france") return { departement: "", keepInKeywords: "" };
+  const postal = value.match(/\b(\d{5})\b/);
+  if (postal) {
+    const code = postal[1];
+    const dept = /^9[78]/.test(code) ? code.slice(0, 3) : code.slice(0, 2);
+    return { departement: dept, keepInKeywords: "" };
+  }
+  const dept = value.match(/\b(2[ab]|\d{2,3})\b/i);
+  if (dept && /^(2[ab]|0[1-9]|[1-8]\d|9[0-5]|97[1-6])$/i.test(dept[1])) {
+    return { departement: dept[1].toUpperCase(), keepInKeywords: "" };
+  }
+  return { departement: "", keepInKeywords: value };
+}
+
+// Mapping de notre niveau d'expérience vers le param `experience` de l'API FT
+// (1 = moins d'un an, 2 = de 1 à 3 ans, 3 = plus de 3 ans). « indifferent » → pas de filtre.
+function franceTravailExperienceParam(level) {
+  if (level === "junior") return "2";
+  if (level === "confirme") return "3";
+  if (level === "debutant_reconversion") return "1";
+  return "";
+}
+
+async function fetchOfficialFranceTravailRaw(keywords, location, limit, experienceLevel = "") {
   const empty = (status, message, networkErrorCount = 0) => ({
     source: "France Travail",
     jobs: [],
@@ -3021,10 +3112,14 @@ async function fetchOfficialFranceTravailRaw(keywords, location, limit) {
   });
   try {
     const token = await getAccessToken();
+    const geo = franceTravailGeoParams(location);
+    const experience = franceTravailExperienceParam(experienceLevel);
     const params = new URLSearchParams({
-      motsCles: location ? `${keywords} ${location}` : keywords,
+      motsCles: geo.keepInKeywords ? `${keywords} ${geo.keepInKeywords}` : keywords,
       range: `0-${Math.max(0, Math.min(149, limit - 1))}`,
     });
+    if (geo.departement) params.set("departement", geo.departement);
+    if (experience) params.set("experience", experience);
     const response = await fetch(`${API_BASE}${SEARCH_PATH}?${params}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     });
@@ -3067,9 +3162,10 @@ async function searchPublicJobs(requestUrl) {
   const requiredAudit = requestUrl.searchParams.get("requiredAudit") === "1";
   const limit = Math.max(1, Math.min(80, Number(requestUrl.searchParams.get("limit") || 25)));
   // Plusieurs sources sont bloquées (403) ou vides : on donne à chaque source un quota
-  // généreux pour que les sources qui répondent remplissent le total visé (limit),
-  // sans exploser la latence (chaque offre = 1 fetch de page détail).
-  const perSourceLimit = Math.max(8, Math.ceil(limit / 6));
+  // généreux pour que les ~4 sources qui répondent (FT, Hellowork, Jobijoba, Apec)
+  // remplissent le total visé (limit). Les pages détail étant fetchées en parallèle,
+  // monter ce cap n'allonge quasi pas la latence (juste plus de sockets simultanés).
+  const perSourceLimit = Math.max(12, Math.ceil(limit / 4));
   const aiKeywords = unique(requestUrl.searchParams.getAll("aiKeyword").map((keyword) => compact(keyword)).filter(Boolean)).slice(0, 8);
   const localKeywordVariants = unique(
     buildKeywordVariants(keywords, smartSearch, experienceLevel).flatMap((keyword) =>
@@ -3079,23 +3175,35 @@ async function searchPublicJobs(requestUrl) {
   const aiKeywordVariants = unique(
     aiKeywords.flatMap((keyword) => expandRequiredTerms(keyword, requiredPoei, requiredAudit, smartSearch)),
   );
-  const keywordVariants = unique([...aiKeywordVariants, ...localKeywordVariants]);
+  // Entrelacement IA / locales : sinon les 8 mots-clés IA monopolisent les premières
+  // paires de requêtes et les variantes locales (junior, débutant, POEI…) ne partent
+  // jamais. On alterne pour que buildQueryPairs pioche un mélange des deux.
+  const keywordVariants = unique(interleave(aiKeywordVariants, localKeywordVariants));
   const locationVariants = buildLocationVariants(location, smartLocation);
   const queryPairs = buildQueryPairs(keywordVariants, locationVariants);
   const useOfficial = configured();
-  const officialRaw = useOfficial ? await fetchOfficialFranceTravailRaw(keywords, location, limit) : null;
   const scrapeSources = useOfficial
     ? PUBLIC_SOURCES.filter((source) => !normalized(source.name).includes("france travail"))
     : PUBLIC_SOURCES;
-  console.log(`[search] "${keywords}"${location ? ` @ ${location}` : ""} — ${queryPairs.length} paires de requêtes, limit=${limit}, perSource=${perSourceLimit}, FT_API=${useOfficial ? "on" : "off (credentials manquants)"}`);
-  const reports = await Promise.allSettled(scrapeSources.map((source) => searchPublicSource(source, queryPairs, perSourceLimit)));
+  // Cooldown : on saute les sources bloquées récemment (403/429). Garde-fou : si tout est
+  // en cooldown (blip réseau global), on ignore le cooldown et on retente tout.
+  const now = Date.now();
+  const eligibleSources = scrapeSources.filter((source) => (sourceCooldownUntil.get(source.name) || 0) <= now);
+  const activeSources = eligibleSources.length ? eligibleSources : scrapeSources;
+  const skippedForCooldown = scrapeSources.length - activeSources.length;
+  console.log(`[search] "${keywords}"${location ? ` @ ${location}` : ""} — ${queryPairs.length} paires de requêtes, limit=${limit}, perSource=${perSourceLimit}, FT_API=${useOfficial ? "on" : "off (credentials manquants)"}${skippedForCooldown ? `, ${skippedForCooldown} source(s) en cooldown` : ""}`);
+  // L'API officielle FT et le scraping tournent en parallèle au lieu d'être sérialisés.
+  const [officialRaw, reports] = await Promise.all([
+    useOfficial ? fetchOfficialFranceTravailRaw(keywords, location, limit, experienceLevel) : Promise.resolve(null),
+    Promise.allSettled(activeSources.map((source) => searchPublicSource(source, queryPairs, perSourceLimit))),
+  ]);
   const rawValues = [];
   if (officialRaw) rawValues.push(officialRaw);
   reports.forEach((report, index) => {
-    rawValues.push(report.status === "fulfilled"
+    const value = report.status === "fulfilled"
       ? report.value
       : {
-          source: scrapeSources[index].name,
+          source: activeSources[index].name,
           jobs: [],
           skippedCount: 0,
           foundCount: 0,
@@ -3104,8 +3212,13 @@ async function searchPublicJobs(requestUrl) {
           poorQualityCount: 0,
           networkErrorCount: isNetworkError(report.reason) ? 1 : 0,
           status: "blocked",
-          message: `${scrapeSources[index].name} : ${isNetworkError(report.reason) ? shortNetworkError(report.reason) : "lecture impossible"}.`,
-        });
+          message: `${activeSources[index].name} : ${isNetworkError(report.reason) ? shortNetworkError(report.reason) : "lecture impossible"}.`,
+        };
+    // Une source qui revient « blocked » est mise en cooldown ; une source qui répond
+    // (même vide) voit son cooldown levé.
+    if (value.status === "blocked") sourceCooldownUntil.set(value.source, now + SOURCE_COOLDOWN_MS);
+    else sourceCooldownUntil.delete(value.source);
+    rawValues.push(value);
   });
   const sourceReports = rawValues.map((value) => {
     const strictJobs = value.jobs.filter((job) => matchesRequiredSignals(job, requiredPoei, requiredAudit));

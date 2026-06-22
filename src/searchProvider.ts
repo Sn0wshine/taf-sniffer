@@ -100,7 +100,7 @@ export const franceTravailProxyProvider: JobSearchProvider = {
       (strategy.aiSearchQueries || []).slice(0, 8).forEach((query) => {
         if (query.trim()) params.append("aiKeyword", query.trim());
       });
-      const response = await fetchWithTimeout(`${proxyBase()}/api/search-jobs?${params}`, {}, 45000);
+      const response = await fetchWithTimeout(`${proxyBase()}/api/search-jobs?${params}`, {}, 60000);
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
