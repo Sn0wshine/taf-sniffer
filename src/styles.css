@@ -3236,7 +3236,7 @@ textarea:focus {
 }
 
 .salary-normalized-panel {
-  background: linear-gradient(180deg, #f8fffd 0%, #ffffff 100%);
+  background: linear-gradient(180deg, var(--green-soft) 0%, var(--panel) 100%);
   border: 1px solid rgba(124, 58, 237, 0.18);
   border-radius: 8px;
   display: grid;
@@ -3277,7 +3277,7 @@ textarea:focus {
 }
 
 .salary-normalized-item {
-  background: #ffffff;
+  background: var(--surface-soft);
   border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 7px;
   display: grid;
@@ -5996,9 +5996,7 @@ textarea:focus {
 }
 
 .mode-simple .salary-normalized-panel {
-  background:
-    linear-gradient(135deg, rgba(232, 245, 238, 0.82), rgba(255, 255, 255, 0.98) 58%),
-    #ffffff;
+  background: linear-gradient(135deg, var(--green-soft), var(--panel) 58%);
   border-color: rgba(22, 115, 72, 0.16);
   border-radius: 13px;
   gap: 10px;
@@ -6010,7 +6008,7 @@ textarea:focus {
 }
 
 .mode-simple .salary-normalized-head strong {
-  color: #0f5132;
+  color: var(--green);
   font-size: 13px;
 }
 
