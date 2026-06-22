@@ -8982,36 +8982,7 @@ button:active:not(:disabled),
   background: var(--line);
 }
 
-/* ── Dark mode ──────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    background: #12101a;
-    color: #f0ece3;
-    --panel: #1e1a2d;
-    --panel-strong: #16132a;
-    --line: #3a3250;
-    --muted: #9e97b0;
-    --ink: #f0ece3;
-    --teal: #a78bfa;
-    --teal-soft: #2d1f5e;
-    --amber: #fb923c;
-    --amber-soft: #3d1f0a;
-    --red: #f87171;
-    --red-soft: #3d1212;
-    --blue: #818cf8;
-    --blue-soft: #1e1b4b;
-    --green: #4ade80;
-    --green-soft: #052e16;
-    --surface: #1a1628;
-    --surface-soft: #231e35;
-    --line-soft: rgba(160, 148, 200, 0.2);
-    --shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
-    --shadow-soft: 0 8px 22px rgba(0, 0, 0, 0.25);
-    --shadow-focus: 0 0 0 3px rgba(167, 139, 250, 0.25);
-  }
-}
-
+/* ── Dark mode (class-only — toggle géré par React, pas la media query) ─ */
 .dark {
   color-scheme: dark;
   background: #12101a;
