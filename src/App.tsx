@@ -7997,7 +7997,8 @@ function ScoreRadar({
           const anchor: "start" | "middle" | "end" = cos > 0.25 ? "start" : cos < -0.25 ? "end" : "middle";
           const active = hoveredIdx === index;
           const labelColor = active ? "#3d6b1a" : "#526170";
-          const valueColor = active ? "#3d6b1a" : "#1e4848";
+          const baseValueColor = axis.value >= 70 ? "#16a34a" : axis.value >= 50 ? "#ca8a04" : axis.value >= 30 ? "#f97316" : "#dc2626";
+          const valueColor = active ? "#3d6b1a" : baseValueColor;
 
           // position label+value lines relative to anchor point, going away from center
           let labelY: number;

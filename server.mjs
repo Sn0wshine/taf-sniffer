@@ -855,12 +855,31 @@ function findRequiredExperience(rawText) {
   ]), 120);
   const text = normalized(`${explicit} ${rawText}`);
 
-  if (["debutant accepte", "débutant accepté", "debutant bienvenu", "sans experience", "sans expérience", "sans experience exigee", "premiere experience acceptee", "première expérience acceptée", "reconversion"].some((term) => text.includes(normalized(term)))) {
-    return "Débutant accepté";
-  }
-  if (["junior", "profil debutant", "profil débutant", "premiere experience", "première expérience"].some((term) => text.includes(normalized(term)))) return "Junior";
+  // Les chiffres ont priorité sur les mots-clés — évite qu'un "junior" dans les tags
+  // écrase un "8 ans d'expérience" dans le corps.
 
-  const yearMatch = text.match(/\b(\d{1,2})\s*(?:an|ans)\b.{0,40}(?:experience|expérience)|(?:experience|expérience).{0,40}\b(\d{1,2})\s*(?:an|ans)\b/);
+  // Fourchette : "2 à 5 ans", "entre 3 et 7 ans", "2-5 ans d'expérience"
+  const rangeMatch = text.match(
+    /(?:entre\s+)?(\d{1,2})\s*(?:[àa]|et|-)\s*(\d{1,2})\s*(?:an|ans|annee|annees)\b.{0,60}(?:experience)|(?:experience).{0,60}(?:entre\s+)?(\d{1,2})\s*(?:[àa]|et|-)\s*(\d{1,2})\s*(?:an|ans|annee|annees)\b/
+  );
+  if (rangeMatch) {
+    const minY = Number(rangeMatch[1] || rangeMatch[3]);
+    if (minY >= 3) return `${minY} ans+`;
+    if (minY === 2) return "2 ans";
+    if (minY === 1) return "1 an";
+  }
+
+  // Minimum explicite : "minimum 3 ans", "au moins 5 ans", "plus de 2 ans"
+  const minMatch = text.match(/(?:minimum|au moins|au minimum|plus de|au-dela de)\s+(\d{1,2})\s*(?:an|ans|annee|annees)\b/);
+  if (minMatch) {
+    const years = Number(minMatch[1]);
+    if (years >= 3) return `${years} ans+`;
+    if (years === 2) return "2 ans";
+    if (years === 1) return "1 an";
+  }
+
+  // Valeur unique proche du mot "expérience"
+  const yearMatch = text.match(/\b(\d{1,2})\s*(?:annee|annees|an|ans)\b.{0,60}(?:experience)|(?:experience).{0,60}\b(\d{1,2})\s*(?:annee|annees|an|ans)\b/);
   if (yearMatch) {
     const years = Number(yearMatch[1] || yearMatch[2]);
     if (years >= 3) return `${years} ans+`;
@@ -868,7 +887,32 @@ function findRequiredExperience(rawText) {
     if (years === 2) return "2 ans";
   }
 
-  if (["profil confirme", "profil confirmé", "senior", "experience exigee", "expérience exigée", "experimente", "expérimenté"].some((term) => text.includes(normalized(term)))) return "Profil confirmé";
+  // Débutant / tous niveaux
+  if ([
+    "debutant accepte", "debutant bienvenu", "sans experience", "sans experience exigee",
+    "premiere experience acceptee", "reconversion", "tous niveaux", "tout niveau",
+    "niveaux d experience acceptes", "ouvert a tous profils", "aucune experience requise",
+    "aucune experience exigee", "profil accessible", "sans condition d experience",
+    "ouvert aux debutants", "accessible sans experience", "profil debutant accepte",
+  ].some((term) => text.includes(normalized(term)))) {
+    return "Débutant accepté";
+  }
+
+  // Junior — avec vérification du contexte négatif ("pas junior", "non junior")
+  if (["junior", "profil debutant", "premiere experience"].some((term) => {
+    const idx = text.indexOf(normalized(term));
+    if (idx === -1) return false;
+    const before = text.slice(Math.max(0, idx - 25), idx);
+    return !/(pas|non|sans|aucun)\s*$/.test(before);
+  })) return "Junior";
+
+  // Profil confirmé / sénior
+  if ([
+    "profil confirme", "profil senior", "senior", "experience exigee", "experimente",
+    "experience significative", "experience solide", "experience confirmee",
+    "experience avancee", "plusieurs annees d experience",
+  ].some((term) => text.includes(normalized(term)))) return "Profil confirmé";
+
   return explicit || "Non précisée";
 }
 
@@ -1165,6 +1209,23 @@ function jsonLdJobPosting(html) {
 
 function nestedValue(value, path) {
   return path.reduce((current, key) => (current && typeof current === "object" ? current[key] : undefined), value);
+}
+
+function experienceFromJsonLd(jsonJob) {
+  if (!jsonJob) return "";
+  const req = jsonJob.experienceRequirements;
+  if (!req) return "";
+  if (typeof req === "string") return req;
+  if (Array.isArray(req)) return req.map((r) => (typeof r === "string" ? r : String(r?.description || r?.name || ""))).filter(Boolean).join(", ");
+  if (typeof req === "object") {
+    // OccupationalExperienceRequirements : { monthsOfExperience: 24 }
+    if (req.monthsOfExperience != null) {
+      const years = Math.round(Number(req.monthsOfExperience) / 12);
+      return `${years} ans`;
+    }
+    return String(req.description || req.name || "");
+  }
+  return "";
 }
 
 function salaryFromJsonLd(baseSalary) {
@@ -2571,7 +2632,7 @@ function parseJobPage(source, url, html) {
   const salaryKind = salaryKindFromText(html) || salaryKindFromText(metadataText) || salaryKindFromText(salary) || "non précisé";
   const cleanTitle = stripHtml(title).replace(/\s*-\s*(?:LinkedIn|Indeed|Hellowork|France Travail).*$/i, "");
   const cleanDescription = stripHtml(description);
-  const requiredExperience = findRequiredExperience(metadataText);
+  const requiredExperience = findRequiredExperience([experienceFromJsonLd(jsonJob), metadataText].filter(Boolean).join("\nExpérience : "));
   const bonus = findBonus([salary, metadataText].filter(Boolean).join("\n"));
   const benefits = findBenefits(metadataText);
   const quality = extractionQuality({ title: cleanTitle, company, location, contract, salary, description: cleanDescription });

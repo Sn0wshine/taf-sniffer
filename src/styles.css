@@ -3979,7 +3979,7 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   margin: 6px 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .compact-detail-panel > summary {
@@ -4207,8 +4207,8 @@ textarea:focus {
 
   .workspace.result-focused .detail-panel {
     align-self: start;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 1fr auto;
     max-height: calc(100vh - 82px);
     overflow: hidden;
     position: sticky;
@@ -4216,7 +4216,6 @@ textarea:focus {
   }
 
   .workspace.result-focused .detail-panel > .offer-detail {
-    flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -4224,7 +4223,6 @@ textarea:focus {
   }
 
   .workspace.result-focused .detail-panel > .dashboard-action-row {
-    flex-shrink: 0;
     border-radius: 0 0 12px 12px;
     border-top: 1px solid rgba(148, 163, 184, 0.22);
     margin: 0;
@@ -8357,7 +8355,7 @@ button:active:not(:disabled),
   pointer-events: none;
   position: absolute;
   right: 0;
-  transform: translateY(calc(100% - 24px));
+  transform: translateY(calc(100% - 48px));
   z-index: 20;
 }
 
