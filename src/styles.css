@@ -1617,9 +1617,8 @@ button {
 }
 
 .workspace {
-  display: grid;
+  display: flex;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 370px;
   margin: 0 auto;
   max-width: 1580px;
 }
@@ -1634,13 +1633,16 @@ button {
 
 .main-panel {
   display: grid;
+  flex: 1;
   gap: 0;
   min-height: calc(100vh - 82px);
+  min-width: 0;
   overflow: hidden;
 }
 
 .ranking-panel {
   align-self: start;
+  flex-shrink: 0;
   max-height: calc(100vh - 82px);
   overflow: hidden;
   position: sticky;
@@ -6941,9 +6943,6 @@ button:active:not(:disabled),
 }
 
 @media (max-width: 1180px) {
-  .workspace {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
 
   .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8475,7 +8474,7 @@ button:active:not(:disabled),
 
 .view-comparison .workspace,
 .view-expert .workspace {
-  grid-template-columns: minmax(0, 1fr);
+  /* flex: single main-panel takes full width automatically */
 }
 
 .view-comparison .main-panel,
