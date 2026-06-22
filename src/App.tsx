@@ -64,6 +64,7 @@ import type {
   ControlledExtractionValues,
   ControlledExtractionField,
   AIMode,
+  CompanyEnrichment,
 } from "./types";
 
 const STORAGE_KEY = "taf-sniffer.jobs.v1";
@@ -2526,6 +2527,7 @@ export function App() {
     normalizeRecentDictionaryState(loadJson(DICTIONARY_RECENTS_KEY, emptyRecentDictionaryState())),
   );
   const [networkDiagnostics, setNetworkDiagnostics] = useState<NetworkDiagnosticsResult | null>(null);
+  const [companyCache, setCompanyCache] = useState<Record<string, CompanyEnrichment | "loading" | "error">>({});
   const [employerRanking, setEmployerRanking] = useState<EmployerRankingResult | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [localGeminiKey, setLocalGeminiKey] = useState(loadLocalGeminiKey);
@@ -3750,6 +3752,19 @@ export function App() {
     if (companyAutoTimerRef.current !== null) window.clearTimeout(companyAutoTimerRef.current);
   }, []);
 
+  useEffect(() => {
+    const company = selected?.analysis.company;
+    if (!company || company.length < 2 || companyCache[company]) return;
+    setCompanyCache((prev) => ({ ...prev, [company]: "loading" }));
+    fetch(`${proxyBase()}/api/company-info?q=${encodeURIComponent(company)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const best = data?.results?.[0];
+        setCompanyCache((prev) => ({ ...prev, [company]: best || "error" }));
+      })
+      .catch(() => setCompanyCache((prev) => ({ ...prev, [company]: "error" })));
+  }, [selected?.analysis.company]);
+
   const importPanel = (
     <section className={`import-strip ${isAdvanced ? "" : "one-button-import secondary-import bottom-import"}`}>
       <div className="section-title">
@@ -4300,6 +4315,7 @@ export function App() {
                 loadingAction={loadingAction}
                 mode={uiState.mode}
                 showDebugInfo={uiState.showDebugInfo}
+                companyEnrichment={typeof companyCache[selected?.analysis.company || ""] === "object" ? companyCache[selected?.analysis.company || ""] as CompanyEnrichment : undefined}
               />
             ) : (
               <div className="empty-state">
@@ -4444,6 +4460,11 @@ export function App() {
                         {job.extractionQuality === "complète" && <span className="import-quality-ok">fiable</span>}
                         {extractionReviewValue(job) === "needs_review" && <span className="import-quality-review">à vérifier</span>}
                         <span>{job.source || datasetDisplayLabel(job.datasetLabel)}</span>
+                        {job.alsoFoundOn && job.alsoFoundOn.length > 0 && (
+                          <span className="multisource-chip" title={`Aussi sur : ${job.alsoFoundOn.join(', ')}`}>
+                            +{job.alsoFoundOn.length} source{job.alsoFoundOn.length > 1 ? 's' : ''}
+                          </span>
+                        )}
                         {uiState.showDebugInfo && job.extractionQuality && <span>{extractionLabel(job.extractionQuality)}</span>}
                       </span>
                     </span>
@@ -7273,6 +7294,7 @@ function OfferDetail({
   loadingAction,
   mode,
   showDebugInfo,
+  companyEnrichment,
 }: {
   job: JobRecord;
   analysis: JobAnalysis;
@@ -7297,6 +7319,7 @@ function OfferDetail({
   loadingAction: string;
   mode: UiMode;
   showDebugInfo: boolean;
+  companyEnrichment?: CompanyEnrichment;
 }) {
   const [editText, setEditText] = useState(job.rawText);
   const reviewStatus = normalizeReviewStatus(job);
@@ -7443,6 +7466,27 @@ function OfferDetail({
                 <span>{analysis.location}</span>
                 <span>{analysis.contract}</span>
               </p>
+              {analysis.normalizedSalary?.monthlyNetMin ? (
+                <p className="offer-hero-salary">
+                  <strong>{analysis.normalizedSalary.fixedLabel || analysis.normalizedSalary.label}</strong>
+                  {analysis.salaryKind === "brut" && <span className="salary-kind-note">brut → net estimé</span>}
+                  {analysis.salaryKind === "net" && <span className="salary-kind-note">net</span>}
+                  {analysis.salaryKind === "non précisé" && <span className="salary-kind-note">estimation prudente</span>}
+                </p>
+              ) : null}
+              {companyEnrichment && (
+                <div className="company-enrichment">
+                  {companyEnrichment.legalForm && <span>{companyEnrichment.legalForm}</span>}
+                  {companyEnrichment.employeesLabel && <span>{companyEnrichment.employeesLabel} salariés</span>}
+                  {companyEnrichment.createdAt && <span>créée {new Date(companyEnrichment.createdAt).getFullYear()}</span>}
+                  {companyEnrichment.sector && <span className="company-sector">{companyEnrichment.sector}</span>}
+                  {companyEnrichment.siren && (
+                    <a href={`https://www.pappers.fr/entreprise/${companyEnrichment.name?.toLowerCase().replace(/\s+/g, '-')}-${companyEnrichment.siren}`} target="_blank" rel="noopener noreferrer" className="company-pappers-link">
+                      Pappers
+                    </a>
+                  )}
+                </div>
+              )}
               <p className="source-line">
                 <span>{datasetDisplayLabel(job.datasetLabel)}</span>
                 {job.source && <span>{job.source}</span>}

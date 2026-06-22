@@ -849,6 +849,14 @@ function findBenefits(rawText) {
   return benefits.length ? benefits.slice(0, 8).join(", ") : "Non mentionnés";
 }
 
+function jobFingerprint(rawText) {
+  const title = normalized(firstMatch(rawText || "", [/^Poste\s*:\s*(.+)$/im]) || "")
+    .split(" ").slice(0, 6).join(" ");
+  const company = normalized(firstMatch(rawText || "", [/^Entreprise\s*:\s*(.+)$/im]) || "")
+    .slice(0, 30);
+  return title ? `${title}|${company}` : "";
+}
+
 function findRequiredExperience(rawText) {
   const explicit = cleanInfoValue(firstMatch(rawText, [
     /^(?:expérience demandée|experience demandee|expérience|experience|profil souhaité|profil souhaite)\s*:\s*(.+)$/im,
@@ -3138,18 +3146,25 @@ async function searchPublicJobs(requestUrl) {
     ].filter(Boolean).join(" · ");
     console.log(`  ${flag} ${r.source.padEnd(22)} ${parts || r.status}`);
   }
-  const seen = new Set();
-  const jobs = sourceReports
-    .flatMap((report) => report.jobs)
-    .filter((job) => {
-      const title = firstMatch(job.rawText, [/Poste\s*:\s*(.+)/i]);
-      const company = firstMatch(job.rawText, [/Entreprise\s*:\s*(.+)/i]);
-      const key = job.sourceUrl || job.sourceId || `${job.source}-${title}-${company}` || job.rawText.slice(0, 180);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, limit);
+  const urlSeen = new Set();
+  const fpMap = new Map();
+  for (const report of sourceReports) {
+    for (const job of report.jobs) {
+      const urlKey = job.sourceUrl || job.sourceId;
+      if (urlKey && urlSeen.has(urlKey)) continue;
+      if (urlKey) urlSeen.add(urlKey);
+      const fp = jobFingerprint(job.rawText || "");
+      const mapKey = fp || `_${urlKey || Math.random().toString(36)}`;
+      if (fp && fpMap.has(fp)) {
+        const primary = fpMap.get(fp);
+        if (!primary.alsoFoundOn) primary.alsoFoundOn = [];
+        primary.alsoFoundOn.push(job.source || "autre source");
+      } else {
+        fpMap.set(mapKey, job);
+      }
+    }
+  }
+  const jobs = [...fpMap.values()].slice(0, limit);
   const networkBlocked =
     !jobs.length &&
     sourceReports.length > 0 &&
@@ -3329,6 +3344,40 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && requestUrl.pathname === "/api/ai/search-plan") {
       return json(res, 200, await buildAiSearchPlan(req));
+    }
+
+    if (req.method === "GET" && requestUrl.pathname === "/api/company-info") {
+      const q = (requestUrl.searchParams.get("q") || "").trim();
+      if (!q) return json(res, 400, { error: { code: "missing_q", message: "Paramètre q requis." } });
+      try {
+        const apiUrl = `https://recherche-entreprises.api.gouv.fr/search?q=${encodeURIComponent(q)}&per_page=3`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        let r;
+        try {
+          r = await fetch(apiUrl, { signal: controller.signal, headers: { Accept: "application/json" } });
+        } finally {
+          clearTimeout(timer);
+        }
+        if (!r.ok) return json(res, 502, { error: { code: "upstream_error", message: "API entreprises indisponible." } });
+        const data = await r.json().catch(() => null);
+        const TRANCHE_LABELS = { "00":"0 salarié","01":"1-2 sal.","02":"3-5 sal.","03":"6-9 sal.","11":"10-19 sal.","12":"20-49 sal.","21":"50-99 sal.","22":"100-199 sal.","31":"200-249 sal.","32":"250-499 sal.","41":"500-999 sal.","42":"1 000-1 999 sal.","51":"2 000-4 999 sal.","52":"5 000-9 999 sal.","53":"10 000+ sal." };
+        const results = (data?.results || []).slice(0, 3).map((e) => ({
+          siren: e.siren,
+          name: e.nom_complet || e.nom_raison_sociale,
+          sigle: e.sigle,
+          employeesLabel: TRANCHE_LABELS[e.tranche_effectif_salarie] || e.categorie_entreprise || null,
+          createdAt: e.date_creation,
+          naf: e.activite_principale,
+          sector: ({ A:"Agriculture",B:"Industries extractives",C:"Industrie manufacturière",D:"Énergie",E:"Eau / déchets",F:"Construction",G:"Commerce / auto",H:"Transports",I:"Hôtellerie / restauration",J:"Info / communication",K:"Finance / assurance",L:"Immobilier",M:"Activités spécialisées / scientifiques",N:"Services admin",O:"Admin publique",P:"Enseignement",Q:"Santé / action sociale",R:"Arts / spectacles",S:"Autres services",T:"Ménages employeurs",U:"Extraterritorial" })[e.section_activite_principale] || null,
+          legalForm: e.categorie_entreprise || null,
+          city: e.siege?.libelle_commune,
+          postalCode: e.siege?.code_postal,
+        }));
+        return json(res, 200, { results });
+      } catch {
+        return json(res, 503, { error: { code: "api_error", message: "API entreprises non joignable." } });
+      }
     }
 
     if (req.method === "GET" && requestUrl.pathname === "/api/company-profile") {

@@ -3674,6 +3674,43 @@ textarea:focus {
   margin-top: 2px;
 }
 
+.company-enrichment {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+}
+
+.company-enrichment > span {
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+}
+
+.company-enrichment .company-sector {
+  background: rgba(6, 117, 111, 0.07);
+  color: var(--teal);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-enrichment .company-pappers-link {
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.company-enrichment .company-pappers-link:hover {
+  text-decoration: underline;
+}
+
 .company-profile-loading {
   background: var(--teal-soft);
   border-radius: 999px;
@@ -4973,6 +5010,16 @@ textarea:focus {
   color: var(--muted);
 }
 
+.multisource-chip {
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 5px;
+  color: #2563eb;
+  cursor: default;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+}
+
 .fit-match {
   background: var(--green-soft);
   border-color: rgba(22, 115, 72, 0.22);
@@ -5716,6 +5763,30 @@ textarea:focus {
 
 .offer-hero-meta span {
   min-width: 0;
+}
+
+.offer-hero-salary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+}
+
+.offer-hero-salary strong {
+  color: var(--teal);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.salary-kind-note {
+  background: rgba(6, 117, 111, 0.08);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  text-transform: uppercase;
 }
 
 .mode-simple .offer-detail.simple-detail {

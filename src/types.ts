@@ -133,6 +133,7 @@ export type JobRecord = {
   source?: string;
   sourceId?: string;
   sourceUrl?: string;
+  alsoFoundOn?: string[];
   searchUrl?: string;
   datasetLabel?: string;
   extractionQuality?: "complète" | "partielle" | "à vérifier";
@@ -142,6 +143,19 @@ export type JobRecord = {
   companyProfile?: CompanyProfile;
   aiReview?: AIReview;
   expectedReview?: ExpectedReview;
+};
+
+export type CompanyEnrichment = {
+  siren?: string;
+  name?: string;
+  sigle?: string;
+  employeesLabel?: string;
+  createdAt?: string;
+  naf?: string;
+  sector?: string;
+  legalForm?: string;
+  city?: string;
+  postalCode?: string;
 };
 
 export type ManualExtraction = {
