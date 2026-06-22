@@ -2538,6 +2538,11 @@ export function App() {
   const [assistantRuntime, setAssistantRuntime] = useState<AssistantRuntimeState>("idle");
   const [assistantHistoryVisible, setAssistantHistoryVisible] = useState(false);
   const [expertTab, setExpertTab] = useState<ExpertTab>("offer");
+  const [darkMode, setDarkMode] = useState<boolean>(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [rankingWidth, setRankingWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('sniffer.split');
+    return saved ? Number(saved) : 340;
+  });
   const backupInputRef = useRef<HTMLInputElement | null>(null);
   const optionsMenuRef = useRef<HTMLDivElement | null>(null);
   const aiManualQueueRef = useRef<Map<string, JobRecord>>(new Map());
@@ -2561,6 +2566,14 @@ export function App() {
   useEffect(() => {
     localStorage.setItem(UI_KEY, JSON.stringify(uiState));
   }, [uiState]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     if (lastSearchSession) localStorage.setItem(SESSION_KEY, JSON.stringify(lastSearchSession));
@@ -3920,6 +3933,7 @@ export function App() {
           ))}
         </nav>
         <div className="topbar-actions">
+          <button className="ghost-button compact" onClick={() => setDarkMode(d => !d)} title="Basculer thème sombre/clair">{darkMode ? '☀' : '☾'}</button>
           <div className="options-menu" ref={optionsMenuRef}>
             <HelpTooltip tooltip="Options de Taf Sniffer : choisis le moteur d'analyse, l'interface Assistant IA ou Avancé, et garde la main sur les appels Gemini.">
               <button
@@ -4372,7 +4386,27 @@ export function App() {
           {isAssistant && assistantResultsVisible && importPanel}
         </section>
 
-        {showRankingRail && <aside className="ranking-panel" aria-label="Classement des offres">
+        {showRankingRail && <div
+          className="split-resizer"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startW = rankingWidth;
+            const onMove = (ev: PointerEvent) => {
+              const next = Math.max(220, Math.min(520, startW + ev.clientX - startX));
+              setRankingWidth(next);
+              localStorage.setItem('sniffer.split', String(next));
+            };
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+          }}
+        />}
+
+        {showRankingRail && <aside className="ranking-panel" style={{ width: rankingWidth }} aria-label="Classement des offres">
           {showAssistantHistoryPanel ? (
             <div className="assistant-history-panel">
               <div className="section-title">
@@ -4478,7 +4512,7 @@ export function App() {
                       className={`rank-score ${scoreClass(aiRankScore ?? analysis.scores.global)} ${aiRankScore !== null ? "ai-rank-score" : ""}`}
                       tooltip={aiRankScore !== null ? "Score IA : Gemini classe cette offre selon ton intention, les critères et les garde-fous locaux." : "Score local : estimation par règles Taf Sniffer quand Gemini n'a pas encore produit de classement frais."}
                     >
-                      {aiRankScore ?? analysis.scores.global}
+                      <ScoreArc score={aiRankScore ?? analysis.scores.global} />
                     </InfoChip>
                     <span className="rank-content">
                       <span className="rank-title-row">
@@ -4515,13 +4549,27 @@ export function App() {
                 );
               })
             ) : (
-              <div className="ranking-empty">
-                {rankingSearch
-                  ? `Aucune annonce ne contient « ${rankingSearch.trim()} » dans ce filtre. Essaie un autre mot-clé ou passe sur Toutes.`
-                  : nonDemoJobs.length > 0 && filter === "to_review"
-                    ? "Aucune offre à traiter dans ce filtre."
-                    : "Aucune offre dans ce filtre."}
-              </div>
+              !rankingSearch && nonDemoJobs.length === 0 && !lastSearchSession ? (
+                <div className="ranking-empty-state">
+                  <svg viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="120" height="90">
+                    <circle cx="52" cy="42" r="28" stroke="var(--teal)" strokeWidth="3" fill="var(--teal-soft)" opacity=".7"/>
+                    <circle cx="52" cy="42" r="18" fill="var(--teal-soft)"/>
+                    <line x1="72" y1="62" x2="90" y2="78" stroke="var(--teal)" strokeWidth="4" strokeLinecap="round"/>
+                    <circle cx="52" cy="42" r="6" fill="var(--teal)" opacity=".5"/>
+                    <path d="M44 42 Q52 32 60 42" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                  </svg>
+                  <strong>Aucune offre à explorer</strong>
+                  <p>Lance l'assistant pour importer et classer des offres automatiquement.</p>
+                </div>
+              ) : (
+                <div className="ranking-empty">
+                  {rankingSearch
+                    ? `Aucune annonce ne contient « ${rankingSearch.trim()} » dans ce filtre. Essaie un autre mot-clé ou passe sur Toutes.`
+                    : nonDemoJobs.length > 0 && filter === "to_review"
+                      ? "Aucune offre à traiter dans ce filtre."
+                      : "Aucune offre dans ce filtre."}
+                </div>
+              )
             )}
           </div>
           </>
@@ -4529,6 +4577,40 @@ export function App() {
         </aside>}
       </main>
     </div>
+  );
+}
+
+function ScoreArc({ score, size = 36 }: { score: number; size?: number }) {
+  const r = size / 2 - 4;
+  const cx = size / 2;
+  const cy = size / 2;
+  const startAngle = -200;
+  const endAngle = 20;
+  const totalDeg = endAngle - startAngle;
+  const fillDeg = (score / 100) * totalDeg;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const arc = (deg: number) => ({
+    x: cx + r * Math.cos(toRad(deg)),
+    y: cy + r * Math.sin(toRad(deg)),
+  });
+  const s = arc(startAngle);
+  const e = arc(startAngle + fillDeg);
+  const largeArc = fillDeg > 180 ? 1 : 0;
+  const color = score >= 70 ? "var(--green)" : score >= 45 ? "var(--teal)" : "var(--amber)";
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+      <path
+        d={`M ${arc(startAngle).x} ${arc(startAngle).y} A ${r} ${r} 0 1 1 ${arc(endAngle).x} ${arc(endAngle).y}`}
+        fill="none" stroke="var(--line)" strokeWidth="3.5" strokeLinecap="round"
+      />
+      {fillDeg > 2 && (
+        <path
+          d={`M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`}
+          fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round"
+        />
+      )}
+      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="10" fontWeight="900" fill={color}>{score}</text>
+    </svg>
   );
 }
 
