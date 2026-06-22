@@ -2546,6 +2546,7 @@ export function App() {
   const previousStrategyHashRef = useRef<string | null>(null);
   const autoAiTimerRef = useRef<number | null>(null);
   const assistantIntroTimerRef = useRef<number | null>(null);
+  const searchPlanPrefetchRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
@@ -3256,6 +3257,25 @@ export function App() {
     setSearchResult((current) => ({ ...current, status: "idle", message: "Prêt.", offers: [] }));
   };
 
+  const refineRanking = (patch: Partial<Strategy>) => {
+    setStrategy((current) => ({ ...current, ...patch }));
+  };
+
+  const relanceWith = (patch: Partial<Strategy>) => {
+    const patchedStrategy: Strategy = {
+      ...strategy,
+      aiSearchQueries: [],
+      aiSearchPlanCheckedAt: "",
+      ...patch,
+    };
+    setStrategy(patchedStrategy);
+    setUiState((current) => ({ ...current, searchReady: false }));
+    setLastSearchSession(null);
+    setLastTop3AiComparison(null);
+    setSearchResult((current) => ({ ...current, status: "idle", message: "Prêt.", offers: [] }));
+    void runSearch(patchedStrategy);
+  };
+
   const selectOffer = (id: string) => {
     setSelectedId(id);
     if (uiState.activeView === "assistant" && assistantHistoryVisible) {
@@ -3588,7 +3608,7 @@ export function App() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ strategy: requestStrategy }),
-        }, 5000);
+        }, 20000);
         rawPayload = await response.json().catch(() => null);
         const rawObject = isObject(rawPayload) ? rawPayload : {};
         const payloadError = isObject(rawObject.error) ? rawObject.error : null;
@@ -3637,14 +3657,29 @@ export function App() {
     }
   };
 
-  const runSearch = async () => {
+  // Pré-chauffe le plan Gemini dès que l'utilisateur arrive sur l'étape Résumé, pendant
+  // qu'il lit la synthèse — le clic « Valider et rechercher » devient alors quasi instantané
+  // au lieu d'attendre le LLM. No-op si un plan existe déjà, en mode local, ou si déjà en vol.
+  const prefetchAssistantSearchPlan = () => {
+    if (uiState.mode !== "assistant" || uiState.aiMode === "local") return;
+    if (searchPlanPrefetchRef.current) return;
+    if (strategy.aiSearchQueries?.length) return;
+    if (!strategy.targetJob.trim() && !strategy.assistantIntent.trim()) return;
+    searchPlanPrefetchRef.current = true;
+    void prepareAssistantSearchStrategy(strategy).finally(() => {
+      searchPlanPrefetchRef.current = false;
+    });
+  };
+
+  const runSearch = async (strategyOverride?: Strategy) => {
+    const effectiveStrategy = strategyOverride ?? strategy;
     startLoading("run-search");
     if (uiState.mode === "assistant") {
       setAssistantRuntime("searching");
       setAssistantHistoryVisible(false);
     }
     try {
-      const searchStrategy = await prepareAssistantSearchStrategy(strategy);
+      const searchStrategy = await prepareAssistantSearchStrategy(effectiveStrategy);
       if (!searchStrategy) {
         if (uiState.mode === "assistant") setAssistantRuntime("active");
         return;
@@ -4192,7 +4227,10 @@ export function App() {
               top3AiCount={automaticAiCandidates(jobs).length}
               employerCount={new Set(analyses.filter(({ job }) => !job.ignored).map(({ analysis }) => analysis.company).filter((company) => !company.toLowerCase().includes("non précisée"))).size}
               onUpdateStrategy={updateSimpleStrategy}
+              onRefineRanking={refineRanking}
+              onRelanceWith={relanceWith}
               onRunSearch={runSearch}
+              onPrepareSearchPlan={prefetchAssistantSearchPlan}
               onOpenSearches={openSearches}
               onRunNetworkDiagnostics={runNetworkDiagnostics}
               onAnalyzeTop3={() => analyzeJobsWithAi(automaticAiCandidates(jobs), false, true, true)}
@@ -4840,7 +4878,10 @@ function SimpleSearchPanel({
   top3AiCount,
   employerCount,
   onUpdateStrategy,
+  onRefineRanking,
+  onRelanceWith,
   onRunSearch,
+  onPrepareSearchPlan,
   onOpenSearches,
   onRunNetworkDiagnostics,
   onAnalyzeTop3,
@@ -4870,7 +4911,10 @@ function SimpleSearchPanel({
   top3AiCount: number;
   employerCount: number;
   onUpdateStrategy: (patch: Partial<Strategy>) => void;
+  onRefineRanking: (patch: Partial<Strategy>) => void;
+  onRelanceWith: (patch: Partial<Strategy>) => void;
   onRunSearch: () => void;
+  onPrepareSearchPlan: () => void;
   onOpenSearches: () => void;
   onRunNetworkDiagnostics: () => void;
   onAnalyzeTop3: () => void;
@@ -4887,6 +4931,7 @@ function SimpleSearchPanel({
   const [criteriaOpen, setCriteriaOpen] = useState(false);
   const [assistantStep, setAssistantStep] = useState<"objective" | "zone" | "conditions" | "constraints" | "summary">("objective");
   const [activeSuggestionField, setActiveSuggestionField] = useState<"job" | "zone" | null>(null);
+  const prevAssistantStepRef = useRef<string | null>(null);
   const sourceReports = lastSearchSession?.sourceReports ?? [];
   const sourceSummary = sourceReportSummary(sourceReports);
   const importQuality = importQualitySummary(lastSearchSession);
@@ -4991,6 +5036,16 @@ function SimpleSearchPanel({
     if (assistantRuntime === "idle" || assistantRuntime === "introFading") setCriteriaOpen(false);
   }, [assistantRuntime]);
 
+  // Pré-chauffe le plan Gemini à l'arrivée sur l'étape Résumé : le clic « rechercher »
+  // n'attend plus le LLM. On ne déclenche qu'à la transition VERS summary (pas à chaque
+  // render) pour éviter de re-spammer Gemini si le plan revient vide. Le parent dédup aussi.
+  useEffect(() => {
+    const enteredSummary = assistantStep === "summary" && prevAssistantStepRef.current !== "summary";
+    prevAssistantStepRef.current = assistantStep;
+    if (assistantRuntime === "active" && enteredSummary) onPrepareSearchPlan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistantStep, assistantRuntime]);
+
   const assistantStageClass = [
     "simple-search-panel",
     "assistant-stage",
@@ -5038,6 +5093,85 @@ function SimpleSearchPanel({
       </section>
     );
   }
+
+  const diagnosisActive = lastSearchSession !== null && (
+    lastSearchSession.importedCount < 8 ||
+    (decisionSummary.match === 0 && decisionSummary.review === 0) ||
+    Boolean(strategy.hideWeakOffers && decisionSummary.hiddenWeak > 0)
+  );
+
+  const diagnosticActions: { key: string; icon: string; label: string; why: string; onAct: () => void }[] = [];
+  if (diagnosisActive) {
+    if (strategy.location?.trim()) {
+      diagnosticActions.push({
+        key: "zone",
+        icon: "↻",
+        label: "Élargir à toute la France",
+        why: `Zone actuelle : « ${strategy.location} ». Élargir peut multiplier les offres disponibles.`,
+        onAct: () => onRelanceWith({ location: "" }),
+      });
+    }
+    const hasRequiredConstraints = strategy.poeiRequirement === "required" || strategy.auditRequirement === "required";
+    if (hasRequiredConstraints) {
+      const constraintLabels: string[] = [];
+      if (strategy.poeiRequirement === "required") constraintLabels.push(FACILITATED_TRAINING_LABEL);
+      if (strategy.auditRequirement === "required") constraintLabels.push(activeProfile.ui.strategicRequirementLabel);
+      const constraintPatch: Partial<Strategy> = {};
+      if (strategy.poeiRequirement === "required") Object.assign(constraintPatch, requirementPatch("poeiRequirement", "prefer"));
+      if (strategy.auditRequirement === "required") Object.assign(constraintPatch, requirementPatch("auditRequirement", "prefer"));
+      diagnosticActions.push({
+        key: "constraints",
+        icon: "↻",
+        label: "Assouplir les contraintes",
+        why: `${constraintLabels.join(" et ")} est en mode obligatoire — le passer en préféré élargit les résultats.`,
+        onAct: () => onRelanceWith(constraintPatch),
+      });
+    }
+    if (strategy.experienceLevel !== "indifferent") {
+      diagnosticActions.push({
+        key: "experience",
+        icon: "↻",
+        label: "Accepter tous niveaux",
+        why: `Filtré sur « ${experienceLabel} ». Passer en indifférent lève ce filtre pour cette relance.`,
+        onAct: () => onRelanceWith({ experienceLevel: "indifferent" }),
+      });
+    }
+    if (strategy.salaryMin > 0) {
+      diagnosticActions.push({
+        key: "salary",
+        icon: "⚡",
+        label: `Retirer le seuil ${strategy.salaryMin} €`,
+        why: `Le salaire mini de ${strategy.salaryMin} €/mois masque les offres sans salaire déclaré. Reclassement instantané.`,
+        onAct: () => onRefineRanking({ salaryMin: 0 }),
+      });
+    }
+    if (strategy.hideWeakOffers && decisionSummary.hiddenWeak > 0) {
+      diagnosticActions.push({
+        key: "weak",
+        icon: "⚡",
+        label: `Voir les ${decisionSummary.hiddenWeak} offres faibles`,
+        why: `${decisionSummary.hiddenWeak} offre${decisionSummary.hiddenWeak > 1 ? "s" : ""} masquée${decisionSummary.hiddenWeak > 1 ? "s" : ""} jugée${decisionSummary.hiddenWeak > 1 ? "s" : ""} faibles. Les afficher ne relance pas la recherche.`,
+        onAct: () => onRefineRanking({ hideWeakOffers: false }),
+      });
+    }
+    if (!strategy.aiSearchQueries?.length) {
+      diagnosticActions.push({
+        key: "ai-plan",
+        icon: "✦",
+        label: "Régénérer le plan IA",
+        why: "La dernière recherche a utilisé uniquement les mots-clés locaux. Forcer un nouveau plan Gemini peut découvrir d'autres offres.",
+        onAct: () => onRelanceWith({}),
+      });
+    }
+  }
+
+  const diagnosisTitle = lastSearchSession?.importedCount === 0
+    ? "Aucune offre importée —"
+    : lastSearchSession && lastSearchSession.importedCount < 8
+      ? `Seulement ${lastSearchSession.importedCount} offre${lastSearchSession.importedCount > 1 ? "s" : ""} —`
+      : decisionSummary.match === 0 && decisionSummary.review === 0
+        ? "Aucun bon match —"
+        : `${decisionSummary.hiddenWeak} masquée${decisionSummary.hiddenWeak > 1 ? "s" : ""} —`;
 
   if (assistantRuntime === "collapsed") {
     return (
@@ -5096,6 +5230,26 @@ function SimpleSearchPanel({
               </HelpTooltip>
             )}
           </div>
+          {diagnosisActive && diagnosticActions.length > 0 && (
+            <div className="search-weak-banner">
+              <span className="search-weak-title">{diagnosisTitle} essaie :</span>
+              <div className="search-weak-actions">
+                {diagnosticActions.map((action) => (
+                  <button
+                    key={action.key}
+                    type="button"
+                    className="search-weak-btn"
+                    title={action.why}
+                    onClick={action.onAct}
+                    disabled={loadingAction === "run-search"}
+                  >
+                    <span className="search-weak-icon" aria-hidden="true">{action.icon}</span>
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {criteriaOpen && (
             <details className="assistant-collapsed-details" open>
               <summary>Critères</summary>
@@ -5203,6 +5357,17 @@ function SimpleSearchPanel({
                   />
                 </div>
               </div>
+              {strategy.targetJob.trim() && queryPlan.keywords.length > 0 && (
+                <div className="objective-preview">
+                  <span className="objective-preview-label">On cherchera déjà ({queryPlan.keywords.length}) :</span>
+                  <div className="keyword-cloud compact">
+                    {queryPlan.keywords.slice(0, 8).map((keyword) => (
+                      <span key={keyword}>{keyword}</span>
+                    ))}
+                    {queryPlan.keywords.length > 8 && <span className="more">+{queryPlan.keywords.length - 8}</span>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5392,6 +5557,15 @@ function SimpleSearchPanel({
                       <span key={keyword}>{keyword}</span>
                     ))}
                   </div>
+                ) : queryPlan.keywords.length ? (
+                  <>
+                    <p className="helper-text">{queryPlan.keywords.length} intitulé{queryPlan.keywords.length > 1 ? "s" : ""} local{queryPlan.keywords.length > 1 ? "aux" : ""} déjà prêt{queryPlan.keywords.length > 1 ? "s" : ""}. Gemini en ajoute au lancement.</p>
+                    <div className="keyword-cloud">
+                      {queryPlan.keywords.slice(0, 12).map((keyword) => (
+                        <span key={keyword}>{keyword}</span>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <p className="helper-text">Les requêtes IA seront générées au lancement de la recherche.</p>
                 )}
