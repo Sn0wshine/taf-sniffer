@@ -1867,6 +1867,8 @@ const reviewPatch = (status: ReviewStatus): Partial<JobRecord> => {
   return { favorite: false, ignored: false, reviewStatus: "a_traiter" };
 };
 
+const isDemo = (job: JobRecord) => job.source === "Démo" || job.datasetLabel === "exemple";
+
 const bestSelectableId = (jobList: JobRecord[], strategy: Strategy) =>
   (() => {
     const ranked = jobList
@@ -2598,15 +2600,17 @@ export function App() {
   }, [optionsOpen]);
 
   const currentStrategyHash = aiStrategyHash(strategy);
+  const nonDemoJobs = useMemo(() => jobs.filter((job) => !isDemo(job)), [jobs]);
+
   const localAnalyses = useMemo(
     () =>
-      jobs
+      nonDemoJobs
         .map((job) => ({
           job,
           analysis: analyzeJob(job, strategy),
         }))
         .sort((a, b) => b.analysis.scores.global - a.analysis.scores.global),
-    [jobs, strategy],
+    [nonDemoJobs, strategy],
   );
   const analyses = useMemo(
     () => sortAnalysisItems(localAnalyses, uiState.aiMode, currentStrategyHash),
@@ -2647,9 +2651,9 @@ export function App() {
       !hasRequiredMismatch(analysis, strategy) &&
       (!strategy.hideWeakOffers || evaluateDecisionFit(analysis, strategy).fit !== "weak"),
   ).length;
-  const exploreCount = jobs.filter((job) => !job.ignored && normalizeReviewStatus(job) === "a_creuser").length;
-  const favoriteCount = jobs.filter((job) => job.favorite).length;
-  const ignoredCount = jobs.filter((job) => job.ignored).length;
+  const exploreCount = nonDemoJobs.filter((job) => !job.ignored && normalizeReviewStatus(job) === "a_creuser").length;
+  const favoriteCount = nonDemoJobs.filter((job) => job.favorite).length;
+  const ignoredCount = nonDemoJobs.filter((job) => job.ignored).length;
   const topThree = eligibleAnalyses.slice(0, 3);
   const activeProfile = getActiveProfile(strategy);
   const isAiRanking = uiState.aiMode !== "local";
@@ -2673,11 +2677,11 @@ export function App() {
   const queryPlan = generateSearchQueries(strategy);
   const decisionSummary = buildDecisionSummary(analyses, strategy);
   const sessionIgnoredCount = lastSearchSession
-    ? jobs.filter((job) => job.searchBatchId === lastSearchSession.id && job.ignored).length
+    ? nonDemoJobs.filter((job) => job.searchBatchId === lastSearchSession.id && job.ignored).length
     : 0;
   const assistantResultsVisible = isResultsView || assistantRuntime === "collapsed";
   const assistantDetailVisible = isResultsView || (isAdvanced && expertTab === "offer") || (isAssistant && Boolean(selectedId));
-  const showAssistantHistoryPanel = isAssistant && !assistantResultsVisible && !assistantHistoryVisible && jobs.length > 0;
+  const showAssistantHistoryPanel = isAssistant && !assistantResultsVisible && !assistantHistoryVisible && nonDemoJobs.length > 0;
   const showAssistantHistoryRail = isAssistant && !assistantResultsVisible && assistantHistoryVisible;
   const showRankingRail = isResultsView || (isAssistant && assistantResultsVisible) || showAssistantHistoryPanel || showAssistantHistoryRail;
 
@@ -3214,7 +3218,7 @@ export function App() {
       setAssistantHistoryVisible(false);
       setSelectedId(null);
     } else {
-      setSelectedId((current) => current ?? bestSelectableId(jobs, strategy) ?? jobs[0]?.id ?? null);
+      setSelectedId((current) => current ?? bestSelectableId(nonDemoJobs, strategy) ?? nonDemoJobs[0]?.id ?? null);
     }
   };
   const setUiMode = (mode: UiMode) => {
@@ -3464,7 +3468,8 @@ export function App() {
           : typeof latestPayload?.message === "string" ? latestPayload.message : "Analyse intelligente non configurée.",
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Analyse intelligente indisponible.";
+      const isAbort = error instanceof DOMException && (error.name === "AbortError" || error.name === "TimeoutError");
+      const message = isAbort ? "Délai dépassé — analyse IA abandonnée." : error instanceof Error ? error.message : "Analyse intelligente indisponible.";
       setStatusMessage(message);
       setAiFallbackMessage(`${message} Tri local provisoire.`);
       const failedIds = new Set(candidates.map((job) => job.id));
@@ -3708,7 +3713,7 @@ export function App() {
         aiTargetJobs = stats.mergedJobs;
       } else if (result.status === "readyWithLocalOffers") {
         setFilter("to_review");
-        setSelectedId(bestSelectableId(jobs, searchStrategy) ?? selectedId);
+        setSelectedId(bestSelectableId(nonDemoJobs, searchStrategy) ?? nonDemoJobs[0]?.id ?? null);
         setLastSearchSession(createSearchSession(searchStrategy, result, batchId, 0, 0));
         setStatusMessage(result.message);
         aiTargetJobs = jobs;
@@ -3768,7 +3773,7 @@ export function App() {
     previousStrategyHashRef.current = currentStrategyHash;
     setLastTop3AiComparison(null);
     if (autoAiTimerRef.current !== null) window.clearTimeout(autoAiTimerRef.current);
-    if (uiState.aiMode === "local" || jobs.length === 0) {
+    if (uiState.aiMode === "local" || nonDemoJobs.length === 0) {
       setAiFallbackMessage("");
       return;
     }
@@ -4201,7 +4206,7 @@ export function App() {
               <button
                 className={`ghost-button compact ${loadingAction === "ai-analyze" ? "is-loading" : ""}`}
                 onClick={() => analyzeJobsWithAi(automaticAiCandidates(jobs, uiState.aiMode === "local" ? "ai_top10" : uiState.aiMode), true, true, true)}
-                disabled={jobs.length === 0}
+                disabled={nonDemoJobs.length === 0}
               >
                 {loadingAction === "ai-analyze" && <span className="button-spinner" aria-hidden="true" />}
                 Réanalyser avec Gemini
@@ -4236,7 +4241,7 @@ export function App() {
               onAnalyzeTop3={() => analyzeJobsWithAi(automaticAiCandidates(jobs), false, true, true)}
               onRankEmployers={rankEmployers}
               assistantRuntime={assistantRuntime}
-              hasSavedJobs={jobs.length > 0}
+              hasSavedJobs={nonDemoJobs.length > 0}
               recentDictionary={recentDictionary}
               onStartAssistant={startAssistant}
               onShowHistory={showAssistantHistory}
@@ -4375,7 +4380,7 @@ export function App() {
                 <h2>Anciennes recherches</h2>
               </div>
               <p className="helper-text">
-                {jobs.length} offre{jobs.length > 1 ? "s" : ""} sauvegardée{jobs.length > 1 ? "s" : ""}. Le détail reste masqué tant que tu ne sélectionnes pas une offre.
+                {nonDemoJobs.length} offre{nonDemoJobs.length > 1 ? "s" : ""} sauvegardée{nonDemoJobs.length > 1 ? "s" : ""}. Le détail reste masqué tant que tu ne sélectionnes pas une offre.
               </p>
               <button className="primary-button one-button" type="button" onClick={showAssistantHistory}>
                 Voir anciennes recherches/offres
@@ -4443,7 +4448,7 @@ export function App() {
             </HelpTooltip>
             <HelpTooltip tooltip="Toutes : affiche toutes les offres, y compris celles déjà marquées ou moins pertinentes.">
               <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-                Toutes <span className="filter-count">{jobs.length}</span>
+                Toutes <span className="filter-count">{nonDemoJobs.length}</span>
               </button>
             </HelpTooltip>
           </div>
@@ -4513,7 +4518,7 @@ export function App() {
               <div className="ranking-empty">
                 {rankingSearch
                   ? `Aucune annonce ne contient « ${rankingSearch.trim()} » dans ce filtre. Essaie un autre mot-clé ou passe sur Toutes.`
-                  : jobs.length > 0 && filter === "to_review"
+                  : nonDemoJobs.length > 0 && filter === "to_review"
                     ? "Aucune offre à traiter dans ce filtre."
                     : "Aucune offre dans ce filtre."}
               </div>
@@ -7640,12 +7645,11 @@ function OfferDetail({
                 <span>{analysis.location}</span>
                 <span>{analysis.contract}</span>
               </p>
-              {analysis.normalizedSalary?.monthlyNetMin ? (
+              {analysis.normalizedSalary?.monthlyNetMin && analysis.normalizedSalary.confidence === "bonne" ? (
                 <p className="offer-hero-salary">
                   <strong>{analysis.normalizedSalary.fixedLabel || analysis.normalizedSalary.label}</strong>
                   {analysis.salaryKind === "brut" && <span className="salary-kind-note">brut → net estimé</span>}
                   {analysis.salaryKind === "net" && <span className="salary-kind-note">net</span>}
-                  {analysis.salaryKind === "non précisé" && <span className="salary-kind-note">estimation prudente</span>}
                 </p>
               ) : null}
               {companyEnrichment && (
