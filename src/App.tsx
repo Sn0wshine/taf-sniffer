@@ -3933,7 +3933,7 @@ export function App() {
           ))}
         </nav>
         <div className="topbar-actions">
-          <button className="ghost-button compact" onClick={() => setDarkMode(d => !d)} title="Basculer thème sombre/clair">{darkMode ? '☀' : '☾'}</button>
+          <button className="icon-button" onClick={() => setDarkMode(d => !d)} title="Basculer thème sombre/clair" aria-label="Basculer thème sombre/clair">{darkMode ? '☀' : '☾'}</button>
           <div className="options-menu" ref={optionsMenuRef}>
             <HelpTooltip tooltip="Options de Taf Sniffer : choisis le moteur d'analyse, l'interface Assistant IA ou Avancé, et garde la main sur les appels Gemini.">
               <button
