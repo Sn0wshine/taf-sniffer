@@ -1618,7 +1618,7 @@ button {
 
 .workspace {
   display: flex;
-  gap: 12px;
+  gap: 4px;
   margin: 0 auto;
   max-width: 1580px;
 }
@@ -5203,7 +5203,7 @@ textarea:focus {
 }
 
 .mode-simple .workspace {
-  gap: 14px;
+  gap: 4px;
 }
 
 .mode-simple .main-panel,
