@@ -1,0 +1,151 @@
+import type {
+  AIMode,
+  ExtractionReviewStatus,
+  JobAnalysis,
+  JobRecord,
+  SearchSession,
+  SourceHealthStats,
+  Strategy,
+  Top3AIComparison,
+} from "./types";
+import { DEFAULT_PROFILE_ID } from "./jobProfiles";
+
+export const STORAGE_KEY = "taf-sniffer.jobs.v1";
+export const STRATEGY_KEY = "taf-sniffer.strategy.v1";
+export const UI_KEY = "taf-sniffer.ui.v1";
+export const SESSION_KEY = "taf-sniffer.lastSearchSession.v1";
+export const TOP3_AI_KEY = "taf-sniffer.top3-ai-comparison.v1";
+export const SOURCE_HEALTH_KEY = "taf-sniffer.sourceHealthStats.v1";
+export const DICTIONARY_RECENTS_KEY = "taf-sniffer.dictionaryRecents.v1";
+export const LOCAL_GEMINI_KEY = "taf-sniffer.localGemini.v1";
+export const COLLECTION_TARGET = 20;
+export const BACKUP_VERSION = 1;
+export const SOURCE_HEALTH_HISTORY_LIMIT = 12;
+export const LEGACY_DEFAULT_TARGET_JOB = "Diagnostiqueur immobilier";
+export const LEGACY_DEFAULT_SALARY_MIN = 1800;
+
+export const defaultStrategy: Strategy = {
+  profileId: DEFAULT_PROFILE_ID,
+  targetJob: "",
+  location: "",
+  salaryMin: 0,
+  experienceLevel: "debutant_reconversion",
+  contractPreference: "any",
+  hideWeakOffers: false,
+  poeiRequirement: "prefer",
+  auditRequirement: "prefer",
+  independentRequirement: "prefer",
+  objective: "",
+  assistantIntent: "",
+  assistantSummary: "",
+  aiSearchQueries: [],
+  aiSearchPlanCheckedAt: "",
+  priorityTraining: true,
+  priorityPoei: true,
+  prioritySalary: true,
+  priorityAudit: true,
+  rejectIndependent: true,
+  smartSearch: true,
+  smartLocation: true,
+};
+
+export type RankingFilter = "new" | "to_review" | "to_explore" | "favorites" | "ignored" | "all";
+export type UiMode = "assistant" | "advanced";
+export type AppView = "assistant" | "results" | "comparison" | "expert";
+export type ExpertTab = "offer" | "search" | "collection" | "validation" | "tools";
+export type StoredUiState = {
+  mode: UiMode;
+  activeView: AppView;
+  searchReady: boolean;
+  showDebugInfo: boolean;
+  aiAutoAnalyze: boolean;
+  aiMode: AIMode;
+};
+export type AssistantRuntimeState = "idle" | "introFading" | "active" | "searching" | "collapsed";
+export type DictionaryField = "job" | "zone";
+export type SwipeRankAction = "explore" | "ignore";
+export type RecentDictionaryItem = {
+  label: string;
+  family: string;
+  aliases: string[];
+  count: number;
+  updatedAt: string;
+};
+export type RecentDictionaryState = Record<DictionaryField, RecentDictionaryItem[]>;
+
+export const DEFAULT_AI_MODE: AIMode = "ai_full";
+export const FACILITATED_TRAINING_LABEL = "Formation facilitée";
+
+export const aiModeLabels: Record<AIMode, string> = {
+  ai_top10: "IA Top 10",
+  ai_full: "IA complète",
+  local: "Local rapide",
+};
+
+export const aiModeDescriptions: Record<AIMode, string> = {
+  ai_top10: "Gemini retrie les 10 meilleures offres présélectionnées localement.",
+  ai_full: "Gemini analyse toutes les offres par lots de 25.",
+  local: "Aucun appel Gemini automatique, tri local uniquement.",
+};
+
+export const appViewLabels: Record<AppView, string> = {
+  assistant: "Assistant",
+  results: "Résultats",
+  comparison: "Comparaison",
+  expert: "Mode expert",
+};
+
+export const appViewDescriptions: Record<AppView, string> = {
+  assistant: "Recherche guidée et intention métier.",
+  results: "Fiche sélectionnée, score et classement.",
+  comparison: "Top offres comparées côte à côte.",
+  expert: "Réglages, collecte, terrain et validation.",
+};
+
+export const expertTabLabels: Record<ExpertTab, string> = {
+  offer: "Offre",
+  search: "Recherche",
+  collection: "Collecte",
+  validation: "Validation",
+  tools: "Outils",
+};
+
+export const RANK_SWIPE_THRESHOLD = 86;
+export const RANK_SWIPE_MAX = 132;
+
+export type BackupPayload = {
+  version: typeof BACKUP_VERSION;
+  exportedAt: string;
+  strategy: Strategy;
+  uiState: StoredUiState;
+  lastSearchSession: SearchSession | null;
+  lastTop3AiComparison?: Top3AIComparison | null;
+  sourceHealthStats?: SourceHealthStats;
+  jobs: JobRecord[];
+};
+
+export type ExtractionDraft = {
+  title: string;
+  company: string;
+  location: string;
+  contract: string;
+  workTime: string;
+  salary: string;
+  bonus: string;
+  requiredExperience: string;
+  benefits: string;
+  source: string;
+  sourceUrl: string;
+  extractionReview: ExtractionReviewStatus;
+};
+
+export type AnalysisItem = {
+  job: JobRecord;
+  analysis: JobAnalysis;
+};
+
+export type TopPick = {
+  kind: string;
+  reason: string;
+  item: AnalysisItem;
+};
