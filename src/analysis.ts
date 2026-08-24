@@ -1552,6 +1552,37 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
       finalEmployer * 0.15 +
       riskScore * 0.15,
   );
+
+  const radarAxes = strategy.radarAxes || ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"];
+  const customAxesScores: Record<string, number> = {};
+  const normalizedText = (originalRawText || "").toLowerCase();
+
+  radarAxes.forEach((axis) => {
+    if (job.aiReview?.status === "done" && job.aiReview.customAxesScores && typeof job.aiReview.customAxesScores[axis] === "number") {
+      customAxesScores[axis] = job.aiReview.customAxesScores[axis];
+      return;
+    }
+    const lowerAxis = axis.toLowerCase();
+    if (lowerAxis === "formation") {
+      customAxesScores[axis] = finalFormation;
+    } else if (lowerAxis === "salaire") {
+      customAxesScores[axis] = finalSalary;
+    } else if (lowerAxis === "trajectoire" || lowerAxis === "evolution" || lowerAxis === "évolution") {
+      customAxesScores[axis] = finalTrajectory;
+    } else if (lowerAxis === "employeur") {
+      customAxesScores[axis] = finalEmployer;
+    } else if (lowerAxis === "risque") {
+      customAxesScores[axis] = riskScore;
+    } else {
+      const keywords = lowerAxis.split(/[\s/']+/).filter((word) => word.length >= 3);
+      const matched = keywords.length > 0 && keywords.some((word) => normalizedText.includes(word));
+      customAxesScores[axis] = matched ? 85 : 50;
+    }
+  });
+
+  const avgCustomScore = clampScore(Math.round(Object.values(customAxesScores).reduce((sum, val) => sum + val, 0) / radarAxes.length));
+  const baseLocalGlobal = (strategy.radarAxes && strategy.radarAxes.length > 0) ? avgCustomScore : weightedLocal;
+
   const formationRequiredMissing = strategy.poeiRequirement === "required" && !(training || poei || fundedCerts || employerTrainingEquivalent);
   const auditRequiredMissing = strategy.auditRequirement === "required" && !audit;
   const independentBlocked = independent && strategy.rejectIndependent;
@@ -1561,7 +1592,7 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
   if (independentBlocked) scoreLine("risk", "Garde-fou : indépendant refusé", -30);
   if (salaryGuardWeak) scoreLine("salaryPackage", "Garde-fou : salaire prioritaire encore trop flou", -12);
   const localGlobal = clampScore(Math.min(
-    weightedLocal,
+    baseLocalGlobal,
     formationRequiredMissing ? 54 : 100,
     auditRequiredMissing ? 58 : 100,
     independentBlocked ? 42 : 100,
@@ -1662,6 +1693,7 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
     scoreConfidence: confidence.level,
     confidenceReasons: confidence.reasons,
     rawText: originalRawText,
+    customAxesScores,
   };
 };
 

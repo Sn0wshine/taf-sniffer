@@ -83,7 +83,7 @@ export const companyProfileChecked = (profile?: CompanyProfile) =>
 export const cleanAiField = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 export const normalizeAiQualityStatus = (value: unknown) => {
-  const text = String(value || "").toLowerCase();
+  const text = terrainText(String(value || ""));
   if (text === "conflict" || text.includes("incoherent") || text.includes("contradiction")) return "conflict" as const;
   if (text === "verify" || text.includes("verifier") || text.includes("doute")) return "verify" as const;
   return "ok" as const;
@@ -211,6 +211,14 @@ export const normalizeAiReview = (value: unknown): AIReview | undefined => {
     confidence: normalizeAiConfidence(value.confidence),
     qualityCheck: normalizeAiQualityCheck(value.qualityCheck),
     errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : "",
+    customAxesScores: isObject(value.customAxesScores)
+      ? Object.fromEntries(
+          Object.entries(value.customAxesScores).map(([key, val]) => [
+            key,
+            Math.max(0, Math.min(100, Math.round(Number(val || 0)))),
+          ]),
+        )
+      : undefined,
   };
 };
 
@@ -319,6 +327,9 @@ export const normalizeAiSearchPlan = (value: unknown) => {
       : [],
     message: typeof value.message === "string" ? value.message : "",
     model: typeof value.model === "string" ? value.model : "",
+    radarAxes: Array.isArray(value.radarAxes)
+      ? value.radarAxes.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 6)
+      : undefined,
   };
 };
 

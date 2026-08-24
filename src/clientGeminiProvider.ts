@@ -1,7 +1,15 @@
 import type { AIReview, JobRecord, Strategy } from "./types";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 
-const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
+const GEMINI_MODELS = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-3.6-flash",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-3.5-flash",
+  "gemini-2.5-pro",
+];
 
 type LocalGeminiJobPayload = {
   id: string;
@@ -105,7 +113,8 @@ Format attendu :
 {
   "summary": "résumé court de la recherche",
   "queries": ["8 requêtes maximum, utiles sur des job boards français"],
-  "reasons": ["4 raisons maximum expliquant les variantes"]
+  "reasons": ["4 raisons maximum expliquant les variantes"],
+  "radarAxes": ["Proposer 3 à 6 axes de score personnalisés (ex: 'Formation', 'Salaire', 'Voiture de fonction', 'Equilibre vie pro')"]
 }
 
 Contraintes :
@@ -124,15 +133,18 @@ export const buildLocalGeminiSearchPlan = async (strategy: Strategy, apiKey: str
       summary: typeof raw.summary === "string" ? raw.summary : "",
       queries: boundedList(raw.queries, 8),
       reasons: boundedList(raw.reasons, 4),
+      radarAxes: boundedList(raw.radarAxes, 6).filter((axis) => axis.length >= 2),
       message: "Plan IA généré avec la clé Gemini locale.",
     };
   });
 
-const reviewPrompt = (input: Omit<LocalGeminiAnalyzeInput, "apiKey">) => `Tu analyses des offres d'emploi pour Taf Sniffer.
+const reviewPrompt = (input: Omit<LocalGeminiAnalyzeInput, "apiKey">) => {
+  const radarAxes = input.strategy.radarAxes || ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"];
+  return `Tu analyses des offres d'emploi pour Taf Sniffer.
 Réponds uniquement en JSON valide, sans markdown.
 
 Stratégie utilisateur :
-${JSON.stringify(input.strategy, null, 2)}
+${JSON.stringify({ ...input.strategy, radarAxes }, null, 2)}
 
 Préférences déduites :
 ${JSON.stringify(input.preferenceMemory || {}, null, 2)}
@@ -159,7 +171,10 @@ Format attendu :
       "salaryRankReasons": ["max 4"],
       "salaryComparableLabel": "salaire comparable si possible",
       "salaryWarnings": ["max 5"],
-      "confidence": "faible | moyenne | bonne"
+      "confidence": "faible | moyenne | bonne",
+      "customAxesScores": {
+        ${radarAxes.map((axis) => `"${axis}": 0`).join(",\n        ")}
+      }
     }
   ]
 }
@@ -168,7 +183,9 @@ Règles :
 - Utilise les localAnalysis fournies, mais corrige ton jugement avec le texte brut si nécessaire.
 - Favorise formation claire, stabilité, compatibilité reconversion, salaire lisible et faible risque.
 - Pénalise indépendant imposé, salaire flou, variable dominant, formation à payer ou incompatibilité avec les critères.
+- Pour chacun des axes personnalisés de radarAxes spécifiés (${radarAxes.join(", ")}), attribue un score de 0 à 100 dans l'objet customAxesScores.
 - aiRankScore et salaryRankScore doivent être entre 0 et 100.`;
+};
 
 export const analyzeJobsWithLocalGemini = async (input: LocalGeminiAnalyzeInput) =>
   withGeminiFallback(input.apiKey, reviewPrompt(input), (payload, model) => {

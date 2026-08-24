@@ -1,14 +1,32 @@
 import type {
   AIMode,
+  ExpectedReview,
   ExtractionReviewStatus,
   JobAnalysis,
   JobRecord,
+  ManualExtraction,
+  ReviewStatus,
   SearchSession,
   SourceHealthStats,
   Strategy,
   Top3AIComparison,
 } from "./types";
 import { DEFAULT_PROFILE_ID } from "./jobProfiles";
+export { demoOffers, extractionTestOffers } from "./demoData";
+
+export type {
+  AIMode,
+  ExpectedReview,
+  ExtractionReviewStatus,
+  JobAnalysis,
+  JobRecord,
+  ManualExtraction,
+  ReviewStatus,
+  SearchSession,
+  SourceHealthStats,
+  Strategy,
+  Top3AIComparison,
+};
 
 export const STORAGE_KEY = "taf-sniffer.jobs.v1";
 export const STRATEGY_KEY = "taf-sniffer.strategy.v1";
@@ -23,6 +41,8 @@ export const BACKUP_VERSION = 1;
 export const SOURCE_HEALTH_HISTORY_LIMIT = 12;
 export const LEGACY_DEFAULT_TARGET_JOB = "Diagnostiqueur immobilier";
 export const LEGACY_DEFAULT_SALARY_MIN = 1800;
+export const RANK_SWIPE_THRESHOLD = 72;
+export const RANK_SWIPE_MAX = 130;
 
 export const defaultStrategy: Strategy = {
   profileId: DEFAULT_PROFILE_ID,
@@ -47,6 +67,7 @@ export const defaultStrategy: Strategy = {
   rejectIndependent: true,
   smartSearch: true,
   smartLocation: true,
+  radarAxes: ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"],
 };
 
 export type RankingFilter = "new" | "to_review" | "to_explore" | "favorites" | "ignored" | "all";
@@ -97,31 +118,17 @@ export const appViewLabels: Record<AppView, string> = {
 
 export const appViewDescriptions: Record<AppView, string> = {
   assistant: "Recherche guidée et intention métier.",
-  results: "Fiche sélectionnée, score et classement.",
-  comparison: "Top offres comparées côte à côte.",
-  expert: "Réglages, collecte, terrain et validation.",
+  results: "Classement et analyse des offres collectées.",
+  comparison: "Comparaison côte à côte des meilleures offres.",
+  expert: "Atelier technique et réglages fins.",
 };
 
 export const expertTabLabels: Record<ExpertTab, string> = {
-  offer: "Offre",
-  search: "Recherche",
-  collection: "Collecte",
-  validation: "Validation",
-  tools: "Outils",
-};
-
-export const RANK_SWIPE_THRESHOLD = 86;
-export const RANK_SWIPE_MAX = 132;
-
-export type BackupPayload = {
-  version: typeof BACKUP_VERSION;
-  exportedAt: string;
-  strategy: Strategy;
-  uiState: StoredUiState;
-  lastSearchSession: SearchSession | null;
-  lastTop3AiComparison?: Top3AIComparison | null;
-  sourceHealthStats?: SourceHealthStats;
-  jobs: JobRecord[];
+  offer: "Analyse express",
+  search: "Recherche & critères",
+  collection: "Collecte réelle",
+  validation: "Validation & règles",
+  tools: "Santé sources & sauvegardes",
 };
 
 export type ExtractionDraft = {
@@ -148,4 +155,15 @@ export type TopPick = {
   kind: string;
   reason: string;
   item: AnalysisItem;
+};
+
+export type BackupPayload = {
+  version: number;
+  exportedAt: string;
+  strategy: Strategy;
+  uiState: StoredUiState;
+  lastSearchSession: SearchSession | null;
+  lastTop3AiComparison: Top3AIComparison | null;
+  sourceHealthStats: SourceHealthStats;
+  jobs: JobRecord[];
 };

@@ -12,3 +12,4 @@ diagnostics/
 .jdk-download/
 .npm-cache/
 *.log
+.claude/

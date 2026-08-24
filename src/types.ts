@@ -21,6 +21,7 @@ export type Strategy = {
   assistantSummary: string;
   aiSearchQueries?: string[];
   aiSearchPlanCheckedAt?: string;
+  radarAxes?: string[];
 };
 
 export type ExperienceLevel = "debutant_reconversion" | "junior" | "confirme" | "indifferent";
@@ -318,6 +319,7 @@ export type AIReview = {
   confidence?: ScoreConfidence;
   qualityCheck?: AIQualityCheck;
   errorMessage?: string;
+  customAxesScores?: Record<string, number>;
 };
 
 export type ReviewStatus = "a_traiter" | "a_creuser" | "favori" | "ignoree";
@@ -509,6 +511,7 @@ export type JobAnalysis = {
   scoreConfidence: ScoreConfidence;
   confidenceReasons: string[];
   rawText: string;
+  customAxesScores?: Record<string, number>;
 };
 
 export type ValidationComparison = {

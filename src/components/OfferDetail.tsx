@@ -332,7 +332,7 @@ function QuickDecisionCard({
     <section className={`quick-decision-card ${quickDecisionVerdictClass(summary.verdict)} ${summary.source}`}>
       <div className="quick-decision-head">
         <div>
-          <span className="eyebrow">Décision rapide</span>
+          <span className="eyebrow">Résumé de l'offre</span>
           <h3>{summary.verdict}</h3>
         </div>
         <div className="quick-decision-chips">
@@ -346,40 +346,23 @@ function QuickDecisionCard({
           )}
         </div>
       </div>
-      <div className="quick-decision-grid">
-        <div>
-          <strong>Pourquoi</strong>
-          <ul>
-            {summary.reasons.slice(0, 3).map((reason) => <li key={reason}>{reason}</li>)}
-          </ul>
-        </div>
-        <div>
-          <strong>Vigilance</strong>
-          {summary.warnings.length ? (
-            <ul>
-              {summary.warnings.slice(0, 3).map((warning) => <li key={warning}>{warning}</li>)}
-            </ul>
-          ) : (
-            <p>Pas de point bloquant majeur détecté.</p>
-          )}
-        </div>
-        <div className="quick-next-action">
-          <strong>Prochaine action</strong>
-          <p>{summary.nextAction}</p>
-          {actionButton}
-          {summary.nextAction !== "ignorer" && decision.fit === "weak" && (
-            <button className="ghost-button compact danger-text" onClick={onIgnore}>
-              {job.ignored ? "Restaurer" : "Ignorer"}
-            </button>
-          )}
-        </div>
+      <div className="quick-decision-summary-body" style={{ marginTop: "12px", marginBottom: "16px" }}>
+        <p style={{ margin: 0, fontSize: "14.5px", lineHeight: "1.55" }}>{review?.summary || analysis.summary}</p>
+      </div>
+      <div className="quick-decision-action-bar" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: "8px", borderTop: "1px solid var(--line-soft)", paddingTop: "12px" }}>
+        {actionButton}
+        {summary.nextAction !== "ignorer" && decision.fit === "weak" && (
+          <button className="ghost-button compact danger-text" onClick={onIgnore}>
+            {job.ignored ? "Restaurer" : "Ignorer"}
+          </button>
+        )}
       </div>
       {showPrep && prep && (
-        <div className="quick-approach-content">
-          {prep.callAngle && <p><strong>Angle d'appel</strong>{prep.callAngle}</p>}
-          {prep.message && <p><strong>Message candidature</strong>{prep.message}</p>}
+        <div className="quick-approach-content" style={{ marginTop: "12px", borderTop: "1px solid var(--line-soft)", paddingTop: "12px" }}>
+          {prep.callAngle && <p><strong>Angle d'appel : </strong>{prep.callAngle}</p>}
+          {prep.message && <p><strong>Message candidature : </strong>{prep.message}</p>}
           {prep.checkpoints.length > 0 && (
-            <ul>
+            <ul style={{ margin: "8px 0 0 0", paddingLeft: "20px" }}>
               {prep.checkpoints.map((item) => <li key={item}>{item}</li>)}
             </ul>
           )}
@@ -518,7 +501,6 @@ function AIReviewCard({
           </ul>
         </div>
       )}
-      <p>{review.summary || "Avis intelligent à vérifier."}</p>
       <p className="muted">Score local {analysis.localScore}/100 → score final {analysis.scores.global}/100.</p>
       <QualityCheckView quality={review.qualityCheck} />
       {showQuestions && recruiterQuestions.length > 0 && (
@@ -1425,72 +1407,14 @@ export function OfferDetail({
         )}
       </section>
 
-      {mode === "assistant" && (
-        <QuickNotesCard job={job} onUpdateExpectedReview={onUpdateExpectedReview} />
-      )}
-
       {mode === "advanced" && (
         <TerrainQuickReview job={job} analysis={analysis} onUpdateExpectedReview={onUpdateExpectedReview} />
       )}
 
       {mode === "assistant" ? (
-        <>
-          <CollapsibleDetail title="Avis IA complet">
-            <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} showQuestions={false} />
-          </CollapsibleDetail>
-
-          <CollapsibleDetail title="Questions recruteur">
-            <ol className="question-list">
-              {displayedQuestions.map((question) => (
-                <li key={question}>{question}</li>
-              ))}
-            </ol>
-            <button className="ghost-button compact" onClick={() => onCopyQuestions(displayedQuestions)}>
-              <Copy size={16} aria-hidden="true" />
-              Copier questions
-            </button>
-          </CollapsibleDetail>
-
-          <CollapsibleDetail title="Score détaillé">
-            <section className="decision-strip">
-              <div>
-                <InfoChip className={confidenceClass(analysis.scoreConfidence)} tooltip={confidenceTooltip(analysis.scoreConfidence)}>
-                  Confiance {analysis.scoreConfidence}
-                </InfoChip>
-                <p>
-                  {analysis.confidenceReasons.length > 0
-                    ? analysis.confidenceReasons.join(" · ")
-                    : "Les informations principales sont suffisamment présentes pour un premier tri."}
-                </p>
-                {analysis.verdictReasons.length > 0 && <p>{analysis.verdictReasons.join(" · ")}</p>}
-              </div>
-              <strong>{analysis.scoreConfidence === "faible" ? "Score à confirmer avant décision" : analysis.verdict}</strong>
-            </section>
-            <div className="three-columns">
-              <SignalList title="Signaux positifs" items={analysis.positiveSignals} empty="Aucun signal fort détecté." tone="positive" />
-              <SignalList title="Red flags" items={analysis.redFlags} empty="Pas de gros red flag." tone="negative" />
-              <SignalList title="À vérifier" items={analysis.uncertainties} empty="Peu d'incertitudes." tone="warning" />
-            </div>
-            <section className="detail-section">
-              <div className="section-title">
-                <AlertTriangle size={18} aria-hidden="true" />
-                <h3>Pourquoi ce score ?</h3>
-              </div>
-              <ScoreExplanation analysis={analysis} />
-            </section>
-            <section className="detail-section">
-              <h3>Angle candidature</h3>
-              <p>{analysis.applicationAngle}</p>
-            </section>
-          </CollapsibleDetail>
-
-          <CollapsibleDetail title="Texte brut">
-            <textarea className="edit-offer-box" rows={10} value={job.rawText} readOnly />
-            <button className="ghost-button compact" onClick={() => navigator.clipboard.writeText(job.rawText)}>
-              Copier le texte
-            </button>
-          </CollapsibleDetail>
-        </>
+        <CollapsibleDetail title="Avis IA complet">
+          <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} showQuestions={false} />
+        </CollapsibleDetail>
       ) : (
         <>
           <section className="detail-section">
@@ -1580,13 +1504,38 @@ export function ScoreRadar({
   activeProfile: ReturnType<typeof getActiveProfile>;
 }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const axes = [
-    { label: "Formation", value: analysis.scores.formationFacilitee ?? analysis.scores.training, tooltip: "Formation facilitée : POEI, POE, AFPR, formation employeur, CPF ou certification financée détectés dans l'offre." },
-    { label: "Salaire", value: analysis.scores.salaryPackage ?? analysis.scores.cashflow, tooltip: "Salaire / package : adéquation du salaire annoncé avec ton objectif, plus primes, avantages et statut." },
-    { label: activeProfile.ui.trajectoryScoreLabel, value: analysis.scores.trajectory, tooltip: "Trajectoire : cohérence du poste avec ton projet — intitulé, missions terrain, progression possible." },
-    { label: "Employeur", value: analysis.scores.employer ?? analysis.scores.audit, tooltip: "Employeur : signaux sur la solidité, le sérieux et l'adéquation de la structure avec ton projet." },
-    { label: "Risque", value: analysis.scores.risk, tooltip: "Risque maîtrisé : absence de pièges — statut imposé, variable dominant, salaire flou ou exigences bloquantes." },
-  ];
+  const radarAxes = analysis.customAxesScores
+    ? Object.keys(analysis.customAxesScores)
+    : ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"];
+
+  const axes = radarAxes.map((axis) => {
+    const lowerAxis = axis.toLowerCase();
+    let value = 50;
+    if (analysis.customAxesScores) {
+      value = analysis.customAxesScores[axis] ?? 50;
+    } else {
+      if (lowerAxis === "formation") value = analysis.scores.formationFacilitee ?? analysis.scores.training;
+      else if (lowerAxis === "salaire") value = analysis.scores.salaryPackage ?? analysis.scores.cashflow;
+      else if (lowerAxis === "trajectoire") value = analysis.scores.trajectory;
+      else if (lowerAxis === "employeur") value = analysis.scores.employer ?? analysis.scores.audit;
+      else if (lowerAxis === "risque") value = analysis.scores.risk;
+    }
+
+    let tooltip = `Axe d'évaluation : ${axis}. Note de ${value}/100.`;
+    if (lowerAxis === "formation") {
+      tooltip = "Formation facilitée : POEI, POE, AFPR, formation employeur, CPF ou certification financée détectés dans l'offre.";
+    } else if (lowerAxis === "salaire") {
+      tooltip = "Salaire / package : adéquation du salaire annoncé avec ton objectif, plus primes, avantages et statut.";
+    } else if (lowerAxis === "trajectoire") {
+      tooltip = `Trajectoire : cohérence du poste avec ton projet (${activeProfile.ui.trajectoryScoreLabel.toLowerCase()}).`;
+    } else if (lowerAxis === "employeur") {
+      tooltip = "Employeur : signaux sur la solidité, le sérieux et l'adéquation de la structure avec ton projet.";
+    } else if (lowerAxis === "risque") {
+      tooltip = "Risque maîtrisé : absence de pièges — statut indépendant imposé, variable dominant, salaire flou ou exigences bloquantes.";
+    }
+
+    return { label: axis, value, tooltip };
+  });
   const center = 50;
   const maxRadius = 30;
   const labelRadius = maxRadius + 13;
