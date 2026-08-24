@@ -3,7 +3,6 @@ import { TOP3_AI_KEY } from "../appConstants";
 import type { AnalysisItem } from "../appConstants";
 import { proxyBase } from "../searchProvider";
 import type {
-  AIReview,
   CompanyEnrichment,
   EmployerRankingResult,
   EmployerRating,

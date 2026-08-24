@@ -46,6 +46,13 @@ export const MIME_TYPES = {
   ".svg": "image/svg+xml",
   ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".txt": "text/plain; charset=utf-8",
 };
 
 export const USER_AGENT =

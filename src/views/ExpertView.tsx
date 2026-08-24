@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { PlusCircle, Settings2 } from "lucide-react";
-import type { AnalysisItem, ExpectedReview, ExpertTab, ManualExtraction, Strategy } from "../appConstants";
+import type { AnalysisItem, ExpectedReview, ExpertTab, Strategy } from "../appConstants";
 import { FACILITATED_TRAINING_LABEL } from "../appConstants";
 import { BackupPanel } from "../components/panels/BackupPanel";
 import { CollectionPanel } from "../components/panels/CollectionPanel";

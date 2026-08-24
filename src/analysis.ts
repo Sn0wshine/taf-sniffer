@@ -454,12 +454,6 @@ const detectWeeklyHours = (text: string) => {
   return DEFAULT_WEEKLY_HOURS;
 };
 
-const averageRange = (min?: number, max?: number) => {
-  if (!Number.isFinite(min)) return undefined;
-  if (!Number.isFinite(max)) return Number(min);
-  return (Number(min) + Number(max)) / 2;
-};
-
 const detectSalaryPeriod = (text: string, values: number[]): JobAnalysis["normalizedSalary"]["period"] => {
   const normalizedText = normalize(text);
   if (hasAny(normalizedText, ["horaire", "/h", "heure"])) return "horaire";
@@ -841,52 +835,8 @@ const cleanAiField = (value?: string) => {
   return clean;
 };
 
-const manualExtractionLines = (job: JobRecord) => {
-  const manual = job.manualExtraction;
-  if (!manual) return "";
-
-  return [
-    ["Poste", cleanManualField(manual.title)],
-    ["Entreprise", cleanManualField(manual.company)],
-    ["Lieu", cleanManualField(manual.location)],
-    ["Contrat", cleanManualField(manual.contract)],
-    ["Temps de travail", cleanManualField(manual.workTime)],
-    ["Salaire", cleanManualField(manual.salary)],
-    ["Primes", cleanManualField(manual.bonus)],
-    ["Expérience demandée", cleanManualField(manual.requiredExperience)],
-    ["Avantages", cleanManualField(manual.benefits)],
-  ]
-    .filter(([, value]) => value)
-    .map(([label, value]) => `${label} : ${value}`)
-    .join("\n");
-};
-
 const aiExtraction = (job: JobRecord) =>
   job.aiReview?.status === "done" && job.aiReview.extraction ? job.aiReview.extraction : undefined;
-
-const aiExtractionLines = (job: JobRecord) => {
-  const extraction = aiExtraction(job);
-  if (!extraction) return "";
-  return [
-    ["Poste", cleanManualField(extraction.title)],
-    ["Entreprise", cleanManualField(extraction.company)],
-    ["Lieu", cleanManualField(extraction.location)],
-    ["Contrat", cleanManualField(extraction.contract)],
-    ["Temps de travail", cleanManualField(extraction.workTime)],
-    ["Salaire", cleanManualField(extraction.salary)],
-    ["Brut / net", cleanManualField(extraction.salaryKind)],
-    ["Primes", cleanManualField(extraction.bonus)],
-    ["Primes estimées", cleanManualField(extraction.bonusEstimate)],
-    ["Expérience demandée", cleanManualField(extraction.requiredExperience)],
-    ["Avantages", cleanManualField(extraction.benefits)],
-    ["Signal POEI", extraction.poeiSignal ? "oui" : ""],
-    ["Signal audit", extraction.auditSignal ? "oui" : ""],
-    ["Signal indépendant", extraction.independentSignal ? "oui" : ""],
-  ]
-    .filter(([, value]) => value)
-    .map(([label, value]) => `${label} : ${value}`)
-    .join("\n");
-};
 
 const labelledValue = (rawText: string, labels: string[]) => {
   const labelPattern = labels.map(escapeRegExp).join("|");

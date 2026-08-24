@@ -16,6 +16,7 @@ import { useBackup } from "./hooks/useBackup";
 import { useJobs } from "./hooks/useJobs";
 import { useJobSearch } from "./hooks/useJobSearch";
 import { useStrategy } from "./hooks/useStrategy";
+import { getActiveProfile } from "./jobProfiles";
 import { generateSearchQueries } from "./searchQueries";
 import { HelpTooltip } from "./components/ui/Tooltips";
 import { EmployerRankingCard } from "./components/ui/EmployerRankingCard";
@@ -27,7 +28,6 @@ import { ResultsView } from "./views/ResultsView";
 import { normalizeUiState } from "./utils/normalizers";
 import {
   collectionChecklist,
-  exportMarkdown,
   exportTerrainMarkdown,
   normalizeReviewStatus,
 } from "./utils/jobHelpers";
@@ -78,7 +78,6 @@ export function App() {
     filteredAnalyses,
     topPicks,
     decisionSummary,
-    selectedId,
     setSelectedId,
     selectedItem,
     filter,
@@ -118,7 +117,6 @@ export function App() {
     employerRanking,
     aiFallbackMessage,
     setAiFallbackMessage,
-    loading: aiLoading,
     analyzeJobsWithAi,
     rankEmployers,
     fetchCompanyProfile,
@@ -173,7 +171,7 @@ export function App() {
     const outcome = await runSearch({
       strategy,
       jobs,
-      onImportRecords: (records, msg, meta) => addJobRecords(records, meta),
+      onImportRecords: (records, _msg, meta) => addJobRecords(records, meta),
       onImportOffers: (text, meta) => addOffers(text, meta),
     });
 
@@ -386,7 +384,7 @@ export function App() {
         {activeView === "comparison" && (
           <OfferComparisonView
             items={sortedAnalyses.slice(0, 3)}
-            activeProfile={strategy as any}
+            activeProfile={getActiveProfile(strategy)}
             onSelect={(id: string) => { setSelectedId(id); setAppView("results"); }}
           />
         )}

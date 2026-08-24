@@ -46,7 +46,6 @@ import {
   isRealWorldJob,
   isSearchResultUrl,
   localQuickDecisionVerdict,
-  metricTone,
   normalizeExpectedReview,
   normalizeReviewStatus,
   prefillExpectedExtraction,
@@ -61,11 +60,9 @@ import {
   normalizeDedupe,
 } from "../utils/jobHelpers";
 import type {
-  QuickDecisionNextAction,
-  QuickDecisionSource,
   QuickDecisionSummary,
 } from "../utils/jobHelpers";
-import { InfoChip, InfoTooltip, InlineHelp } from "./ui/Tooltips";
+import { InfoChip, InlineHelp } from "./ui/Tooltips";
 
 const buildQuickDecisionSummary = (
   job: JobRecord,
@@ -537,29 +534,6 @@ function AIReviewCard({
         <SignalList title="Points bloquants IA" tooltip={signalListTooltip("Points bloquants IA")} items={review.blockers || []} empty="Aucun blocage IA." tone="negative" />
         <SignalList title="À vérifier IA" tooltip={signalListTooltip("À vérifier IA")} items={uncertainties} empty="Peu d'incertitudes IA." tone="warning" />
       </div>
-    </section>
-  );
-}
-
-function QuickNotesCard({
-  job,
-  onUpdateExpectedReview,
-}: {
-  job: JobRecord;
-  onUpdateExpectedReview: (patch: Partial<ExpectedReview>) => void;
-}) {
-  const review = normalizeExpectedReview(job);
-  return (
-    <section className="quick-notes-card">
-      <div className="section-title">
-        <h3>Notes rapides</h3>
-      </div>
-      <textarea
-        value={review.notes}
-        rows={2}
-        placeholder="Ton avis perso : appeler, éviter, question à clarifier..."
-        onChange={(event) => onUpdateExpectedReview({ notes: event.target.value })}
-      />
     </section>
   );
 }
@@ -1462,40 +1436,6 @@ export function OfferDetail({
   );
 }
 
-function ScoreMetrics({
-  analysis,
-  activeProfile,
-  className = "",
-}: {
-  analysis: JobAnalysis;
-  activeProfile: ReturnType<typeof getActiveProfile>;
-  className?: string;
-}) {
-  const trajectoryLabel = activeProfile.ui.trajectoryScoreLabel;
-  const metricTooltips = {
-    formation:
-      "Formation facilitée : ce que Taf Sniffer comprend comme aide réelle à l'entrée dans le métier : POEI, POEC, AFPR, formation prise en charge, certification financée, tutorat ou parcours d'intégration clair.",
-    salary:
-      "Salaire / package : lisibilité et intérêt économique de l'offre. L'axe regarde le fixe, brut/net, primes, avantages, frais, temps de travail et zones de flou.",
-    trajectory:
-      `${trajectoryLabel} : potentiel de progression vers ton objectif. L'axe valorise les missions qui construisent une suite logique : montée en compétence, spécialisation, audit, conseil, responsabilités ou passerelle métier.`,
-    employer:
-      "Employeur : qualité estimée du cadre. L'axe repère une structure formatrice, stable ou crédible, les avantages concrets, et les signaux qui rendent l'entreprise plus ou moins rassurante.",
-    risk:
-      "Risque maîtrisé : absence de pièges probables. L'axe pénalise indépendant imposé, salaire trop flou, variable dominant, formation à payer, pression commerciale ou incompatibilité avec les critères.",
-  };
-
-  return (
-    <div className={`summary-grid ${className}`.trim()}>
-      <Metric label="Formation facilitée" value={analysis.scores.formationFacilitee ?? analysis.scores.training} tooltip={metricTooltips.formation} />
-      <Metric label="Salaire / package" value={analysis.scores.salaryPackage ?? analysis.scores.cashflow} tooltip={metricTooltips.salary} />
-      <Metric label={trajectoryLabel} value={analysis.scores.trajectory} tooltip={metricTooltips.trajectory} />
-      <Metric label="Employeur" value={analysis.scores.employer ?? analysis.scores.audit} tooltip={metricTooltips.employer} />
-      <Metric label="Risque maîtrisé" value={analysis.scores.risk} tooltip={metricTooltips.risk} />
-    </div>
-  );
-}
-
 export function ScoreRadar({
   analysis,
   activeProfile,
@@ -1628,22 +1568,6 @@ export function ScoreRadar({
       </div>
     )}
     </div>
-  );
-}
-
-function Metric({ label, value, tooltip }: { label: string; value: number; tooltip: string }) {
-  return (
-    <InfoTooltip tooltip={tooltip}>
-      {(tooltipId) => (
-        <span className={`metric ${metricTone(value)}`} tabIndex={0} aria-describedby={tooltipId}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-          <span className="meter" aria-hidden="true">
-            <span style={{ width: `${value}%` }} />
-          </span>
-        </span>
-      )}
-    </InfoTooltip>
   );
 }
 

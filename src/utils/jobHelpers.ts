@@ -19,8 +19,6 @@ import type {
   SourceReport,
   Strategy,
   ValidationTag,
-  AIReview,
-  Top3AIComparison,
 } from "../types";
 import { analyzeJob } from "../analysis";
 import { compareValidation } from "../validation";
@@ -30,23 +28,12 @@ import { normalizeSuggestionText } from "../suggestionDictionary";
 import type { DictionarySuggestion } from "../suggestionDictionary";
 import type {
   AnalysisItem,
-  AppView,
   DictionaryField,
   RecentDictionaryItem,
   RecentDictionaryState,
-  StoredUiState,
   TopPick,
-  UiMode,
 } from "../appConstants";
-import {
-  BACKUP_VERSION,
-  DEFAULT_AI_MODE,
-  FACILITATED_TRAINING_LABEL,
-  LEGACY_DEFAULT_SALARY_MIN,
-  LEGACY_DEFAULT_TARGET_JOB,
-  SOURCE_HEALTH_HISTORY_LIMIT,
-  defaultStrategy,
-} from "../appConstants";
+import { SOURCE_HEALTH_HISTORY_LIMIT } from "../appConstants";
 export const scoreClass = (score: number) => {
   if (score >= 82) return "score high";
   if (score >= 68) return "score good";
