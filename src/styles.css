@@ -9221,3 +9221,58 @@ button:active:not(:disabled),
 }
 
 
+/* ── Formation financée : carte signaux ─────────────────────────────── */
+.formation-signals-card {
+  background: linear-gradient(135deg, rgba(234, 249, 242, 0.82), rgba(255, 255, 255, 0.98) 62%), #ffffff;
+  border: 1px solid rgba(22, 115, 72, 0.16);
+  border-radius: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.formation-signals-card.possible {
+  background: linear-gradient(135deg, rgba(254, 249, 231, 0.85), rgba(255, 255, 255, 0.98) 62%), #ffffff;
+  border-color: rgba(176, 122, 0, 0.22);
+}
+
+.formation-signals-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.formation-signals-head strong {
+  font-size: 13px;
+}
+
+.formation-signals-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.formation-type-chip {
+  border: 1px solid rgba(6, 117, 111, 0.3);
+  border-radius: 999px;
+  color: var(--teal, #06756f);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+
+.formation-signals-citations {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.formation-signals-citations li {
+  color: var(--muted, #64748b);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.45;
+}
+

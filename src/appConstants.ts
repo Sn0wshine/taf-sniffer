@@ -70,7 +70,7 @@ export const defaultStrategy: Strategy = {
   radarAxes: ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"],
 };
 
-export type RankingFilter = "new" | "to_review" | "to_explore" | "favorites" | "ignored" | "all";
+export type RankingFilter = "new" | "to_review" | "to_explore" | "favorites" | "ignored" | "formation" | "all";
 export type UiMode = "assistant" | "advanced";
 export type AppView = "assistant" | "results" | "comparison" | "expert";
 export type ExpertTab = "offer" | "search" | "collection" | "validation" | "tools";

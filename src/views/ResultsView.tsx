@@ -13,6 +13,7 @@ import type {
 } from "../appConstants";
 import { OfferDetail } from "../components/OfferDetail";
 import { ClipboardImportButton } from "../components/ui/ClipboardImportButton";
+import { buildFormationSignals } from "../formationSignals";
 import { ScoreArc } from "../components/ui/ScoreArc";
 import { SwipeRankCard } from "../components/ui/SwipeRankCard";
 import { HelpTooltip, InfoChip } from "../components/ui/Tooltips";
@@ -88,6 +89,9 @@ export function ResultsView({
   const exploreCount = analyses.filter(({ job }) => normalizeReviewStatus(job) === "a_creuser" && !job.ignored).length;
   const favoritesCount = analyses.filter(({ job }) => job.favorite || normalizeReviewStatus(job) === "favori").length;
   const ignoredCount = analyses.filter(({ job }) => job.ignored || normalizeReviewStatus(job) === "ignoree").length;
+  const formationCount = analyses.filter(
+    ({ job, analysis }) => !job.ignored && buildFormationSignals(analysis.rawText).level === "confirmée",
+  ).length;
   const strategyHash = JSON.stringify(strategy);
   const profile = getActiveProfile(strategy);
 
@@ -117,6 +121,14 @@ export function ResultsView({
               onClick={() => onFilterChange("favorites")}
             >
               Favoris <span className="filter-count">{favoritesCount}</span>
+            </button>
+          </HelpTooltip>
+          <HelpTooltip tooltip="Uniquement les offres avec un dispositif de formation financée détecté (POEI, OPCO, CPF, formation employeur...).">
+            <button
+              className={`filter-pill ${filter === "formation" ? "active" : ""}`}
+              onClick={() => onFilterChange("formation")}
+            >
+              🎓 Formation <span className="filter-count">{formationCount}</span>
             </button>
           </HelpTooltip>
           <HelpTooltip tooltip="Afficher les offres ignorées (restaurables).">

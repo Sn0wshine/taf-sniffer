@@ -6,6 +6,7 @@ import {
 } from "../appConstants";
 import type { AIMode, AnalysisItem, ExpectedReview, JobRecord, ManualExtraction, RankingFilter, ReviewStatus, Strategy, SwipeRankAction } from "../appConstants";
 import { analyzeJob, createJobRecord } from "../analysis";
+import { buildFormationSignals } from "../formationSignals";
 import { getActiveProfile } from "../jobProfiles";
 import {
   bestSelectableId,
@@ -99,6 +100,8 @@ export function useJobs(strategy: Strategy, aiMode: AIMode) {
         if (!job.ignored && status !== "ignoree") return false;
       } else if (filter === "to_explore") {
         if (job.ignored || status !== "a_creuser") return false;
+      } else if (filter === "formation") {
+        if (job.ignored || buildFormationSignals(analysis.rawText).level !== "confirmée") return false;
       } else if (filter === "to_review") {
         if (job.ignored || status !== "a_traiter") return false;
       } else if (filter === "new") {

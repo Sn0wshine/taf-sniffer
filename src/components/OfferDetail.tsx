@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -12,6 +12,7 @@ import {
   Star,
 } from "lucide-react";
 import { getControlledExtraction } from "../analysis";
+import { buildFormationSignals } from "../formationSignals";
 import { getActiveProfile } from "../jobProfiles";
 import { validationTags } from "../validation";
 import type {
@@ -550,6 +551,44 @@ function CollapsibleDetail({
       <summary>{title}</summary>
       <div className="compact-detail-content">{children}</div>
     </details>
+  );
+}
+
+function FormationSignalsCard({ rawText }: { rawText: string }) {
+  const signal = useMemo(() => buildFormationSignals(rawText), [rawText]);
+  if (signal.level === "absente" && !signal.payTrainingWarning) return null;
+  const levelClass = signal.level === "confirmée" ? "confirmed" : "possible";
+  const levelLabel = signal.level === "confirmée" ? "Confirmée" : "À vérifier dans l'annonce";
+  return (
+    <div className={`formation-signals-card ${levelClass}`} aria-label="Formation financée">
+      <div className="formation-signals-head">
+        <strong>🎓 Formation financée : {levelLabel}</strong>
+        {signal.payTrainingWarning && (
+          <InfoChip
+            className="field-quality-chip verify"
+            tooltip="L'annonce évoque une formation ou un pack à la charge du candidat. Vérifie qui paie quoi avant de t'engager."
+          >
+            à payer ?
+          </InfoChip>
+        )}
+      </div>
+      {signal.types.length > 0 && (
+        <div className="formation-signals-types">
+          {signal.types.map((type) => (
+            <span key={type} className="formation-type-chip">
+              {type}
+            </span>
+          ))}
+        </div>
+      )}
+      {signal.citations.length > 0 && (
+        <ul className="formation-signals-citations">
+          {signal.citations.map((citation, index) => (
+            <li key={index}>« {citation} »</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -1192,6 +1231,7 @@ export function OfferDetail({
             IA : {qualityIssues.map((item) => `${item.field} à vérifier`).join(" · ")}
           </p>
         )}
+        {!isEditingExtraction && <FormationSignalsCard rawText={analysis.rawText || job.rawText} />}
         {!isEditingExtraction && (
           <div className="salary-normalized-panel" aria-label="Salaire normalisé">
             <div className="salary-normalized-head">
