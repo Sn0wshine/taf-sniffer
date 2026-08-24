@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getControlledExtraction } from "../analysis";
 import { buildFormationSignals } from "../formationSignals";
+import { getMarketStats, marketKeyFor, monthlyNetMidOf, salaryPositionLabel } from "../marketStats";
 import { getActiveProfile } from "../jobProfiles";
 import { validationTags } from "../validation";
 import type {
@@ -918,6 +919,13 @@ export function OfferDetail({
   const effective = controlled.values;
   const reviewValue = extractionReviewValue(job);
   const companyProfile = job.companyProfile;
+  const marketKey = marketKeyFor(strategy.targetJob, strategy.location);
+  const offerMonthlyNetMid = monthlyNetMidOf(analysis);
+  const marketPosition = useMemo(() => {
+    if (!offerMonthlyNetMid) return null;
+    const stats = getMarketStats(marketKey, [offerMonthlyNetMid]);
+    return stats ? salaryPositionLabel(offerMonthlyNetMid, stats) : null;
+  }, [marketKey, offerMonthlyNetMid]);
   const companyAction = `identify-company-${job.id}`;
   const companyLoading = loadingAction === companyAction || companyProfile?.status === "loading";
   const companyProfileVisible = Boolean(companyProfile && companyProfile.status !== "idle" && companyProfile.status !== "loading");
@@ -1276,6 +1284,11 @@ export function OfferDetail({
                 </div>
               ))}
             </div>
+            {marketPosition && (
+              <small className={`salary-market-position tone-${marketPosition.tone}`}>
+                📊 {marketPosition.label}
+              </small>
+            )}
             {showDebugInfo && salaryFieldMeta && salaryFieldMeta.quality !== "ok" && salaryFieldMeta.reason && (
               <small className="field-quality-reason">{salaryFieldMeta.reason}</small>
             )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   AnalysisItem,
   ExpectedReview,
@@ -14,6 +14,13 @@ import type {
 import { OfferDetail } from "../components/OfferDetail";
 import { ClipboardImportButton } from "../components/ui/ClipboardImportButton";
 import { buildFormationSignals } from "../formationSignals";
+import {
+  collectMarketSamples,
+  formatEuro,
+  marketKeyFor,
+  recordAndComputeMarketStats,
+  type MarketStats,
+} from "../marketStats";
 import { ScoreArc } from "../components/ui/ScoreArc";
 import { SwipeRankCard } from "../components/ui/SwipeRankCard";
 import { HelpTooltip, InfoChip } from "../components/ui/Tooltips";
@@ -85,6 +92,17 @@ export function ResultsView({
   });
   const [isEditingExtraction, setIsEditingExtraction] = useState(false);
 
+  const marketKey = useMemo(() => marketKeyFor(strategy.targetJob, strategy.location), [strategy.targetJob, strategy.location]);
+  const [marketStats, setMarketStats] = useState<MarketStats | null>(null);
+  const marketSamples = useMemo(
+    () => collectMarketSamples(analyses.map(({ analysis }) => analysis)),
+    [analyses],
+  );
+
+  useEffect(() => {
+    setMarketStats(recordAndComputeMarketStats(marketKey, marketSamples));
+  }, [marketKey, marketSamples]);
+
   const reviewCount = analyses.filter(({ job }) => normalizeReviewStatus(job) === "a_traiter" && !job.ignored).length;
   const exploreCount = analyses.filter(({ job }) => normalizeReviewStatus(job) === "a_creuser" && !job.ignored).length;
   const favoritesCount = analyses.filter(({ job }) => job.favorite || normalizeReviewStatus(job) === "favori").length;
@@ -148,6 +166,22 @@ export function ResultsView({
             </button>
           </HelpTooltip>
         </div>
+
+        {marketStats && (
+          <div className="market-banner" aria-label="Statistiques de salaire du marché">
+            💰 Marché observé · <strong>{strategy.targetJob || "tous métiers"}</strong>
+            {strategy.location ? (
+              <>
+                {" @ "}
+                <strong>{strategy.location}</strong>
+              </>
+            ) : null}
+            {" — "}
+            médiane <strong>{formatEuro(marketStats.median)}</strong> net/mois, fourchette{" "}
+            {formatEuro(marketStats.min)} – {formatEuro(marketStats.max)} ({marketStats.sampleCount} offres avec
+            salaire)
+          </div>
+        )}
 
         <div className="results-search-row">
           <input
