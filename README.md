@@ -24,14 +24,9 @@ http://127.0.0.1:8787/
 
 Taf Sniffer fonctionne alors en local avec recherche publique best-effort, import manuel, scoring, session de recherche et sauvegarde.
 Le mode simple ajoute aussi des filtres decisionnels apres recherche : contrat souhaite, offres faibles masquees par defaut, bilan des ecarts et ligne `Criteres` dans le detail d'offre.
-Le classement est maintenant IA-first : quand Gemini fournit un `aiRankScore` frais, il pilote l'ordre des offres. Le scoring local reste un fallback robuste et un diagnostic explicable, compose de cinq axes : Formation facilitee, Salaire / package, Trajectoire, Employeur et Risque maitrise.
-La logique de formation facilitee est large : POEI, POE, POEC, POEIC, AFPR, formation prealable, formation prise en charge, OPCO, France Travail, CPF, certification financee et formation employeur claire.
-Le bloc `Infos extraites` permet aussi d'identifier automatiquement ou a la demande une entreprise via le proxy local : type estime, site probable, signaux et confiance, sans ecraser les corrections manuelles.
-Depuis la v0.800, l'accueil `Assistant IA` demarre sur un bloc epure avec le bouton `Lancer l'assistant`. Les questions apparaissent ensuite en fondu, les anciennes offres restent accessibles via le panneau droit, et le bloc se replie en resume compact apres recherche reussie.
-Depuis la v0.7.0, le mode par defaut est `Assistant IA` : un pager guide l'intention metier, la zone, les conditions, les contraintes et un resume editable. Le formulaire complet reste disponible en `Avance`. L'assistant peut generer un plan de recherche IA au bouton final, via `gemini-3.1-flash-lite` puis `gemini-2.5-flash-lite`, sans appel pendant la saisie.
-Depuis la v0.7.1, des infobulles coach apparaissent au survol ou au focus sur les controles, badges, scores et notions importantes pour expliquer leur role sans alourdir l'ecran. Depuis la v0.7.2, celles de la barre haute s'ouvrent vers le bas pour rester visibles.
-Depuis la v0.6.0, la roue d'options permet de choisir le moteur d'analyse : `IA Top 10`, `IA complete` ou `Local rapide`. Depuis la v0.6.3, `IA complete` devient le mode par defaut. Quand Gemini est disponible, il peut piloter le classement avec un score de rang IA et comparer les salaires a parametres egaux : brut/net, mensuel/annuel, 35H/39H, fixe/variable, primes, avantages, statut, frais et formation. Depuis la v0.6.1, la cascade Gemini par defaut est `gemini-3.5-flash`, puis `gemini-3.1-flash-lite`, puis `gemini-2.5-flash-lite`. Si Gemini est indisponible, Taf Sniffer garde un fallback local.
-Depuis la v0.6.2, le proxy local garde aussi un compteur par modele pour respecter les limites connues : 3.5 Flash `5/min` et `20/jour`, 3.1 Flash Lite `15/min` et `500/jour`, 2.5 Flash Lite `10/min` et `20/jour`. Les offres deja analysees avec les criteres courants ne sont pas renvoyees automatiquement.
+Le classement est IA-first : quand Gemini fournit un `aiRankScore` frais, il pilote l'ordre des offres. Le scoring local reste un fallback robuste et un diagnostic explicable, compose de cinq axes : Formation facilitee, Salaire / package, Trajectoire, Employeur et Risque maitrise.
+
+L'historique detaille des versions (assistant IA, cascade Gemini, infobulles coach, compteurs de quota par modele...) est dans [CHANGELOG.md](CHANGELOG.md).
 
 Par défaut, la recherche intelligente est volontairement large :
 
@@ -150,6 +145,8 @@ proxy local multi-sources
 ```
 
 Les clés API du proxy local, si tu en utilises, restent dans `.env`. Une clé Gemini locale peut aussi être saisie manuellement dans les options pour le secours mobile : elle reste dans le stockage local de l'appareil, n'est pas exportée en JSON et n'est pas réaffichée en clair.
+
+Le proxy lit aussi l'en-tête `x-gemini-api-key` envoyé par l'app sur `/api/ai/*` : si une clé Gemini locale est configurée dans l'app, le proxy l'utilise en priorité pour les appels Gemini et préserve ainsi le quota de la clé `.env` du serveur.
 
 ## Collecte semi-manuelle
 

@@ -5,6 +5,12 @@ import { compact, hashString, normalized, unique } from "../scrapers/utils.mjs";
 
 export const geminiUsage = new Map();
 
+export function apiKeyFromRequest(req) {
+  const raw = req?.headers?.["x-gemini-api-key"];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === "string" ? value.trim().slice(0, 200) : "";
+}
+
 export function geminiModelChain() {
   const fallbackText = env.GEMINI_FALLBACK_MODELS || env.GEMINI_FALLBACK_MODEL || "gemini-3.1-flash-lite,gemini-2.5-flash-lite";
   return unique([GEMINI_MODEL, ...String(fallbackText).split(/[,;\s]+/)]);
@@ -466,14 +472,14 @@ export function retryDelayFromGemini(message) {
   return match ? Math.ceil(Number(match[1])) : null;
 }
 
-export async function callGeminiForJobsWithModel(jobs, strategy, strategyHash, model, preferenceMemory) {
+export async function callGeminiForJobsWithModel(jobs, strategy, strategyHash, model, preferenceMemory, apiKey = env.GEMINI_API_KEY) {
   checkGeminiQuota(model);
   const startedAt = Date.now();
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": env.GEMINI_API_KEY,
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: aiBatchPromptFor(jobs, strategy, preferenceMemory) }] }],
@@ -547,6 +553,7 @@ export async function callGeminiForJobsWithModel(jobs, strategy, strategyHash, m
     jobCount: jobs.length,
     reviewCount: reviews.length,
     doneCount: reviews.filter((review) => review.status === "done").length,
+    keySource: apiKey && apiKey !== env.GEMINI_API_KEY ? "client" : "server",
   });
 
   return {
@@ -555,13 +562,13 @@ export async function callGeminiForJobsWithModel(jobs, strategy, strategyHash, m
   };
 }
 
-export async function callGeminiForJobs(jobs, strategy, strategyHash, preferenceMemory) {
+export async function callGeminiForJobs(jobs, strategy, strategyHash, preferenceMemory, apiKey = env.GEMINI_API_KEY) {
   const models = geminiModelChain();
   let lastError = null;
 
   for (const model of models) {
     try {
-      const result = await callGeminiForJobsWithModel(jobs, strategy, strategyHash, model, preferenceMemory);
+      const result = await callGeminiForJobsWithModel(jobs, strategy, strategyHash, model, preferenceMemory, apiKey);
       return { ...result, model };
     } catch (error) {
       lastError = error;
@@ -623,14 +630,14 @@ export function normalizeSearchPlanPayload(value) {
   };
 }
 
-export async function callGeminiForSearchPlanWithModel(strategy, model) {
+export async function callGeminiForSearchPlanWithModel(strategy, model, apiKey = env.GEMINI_API_KEY) {
   checkGeminiQuota(model);
   const startedAt = Date.now();
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": env.GEMINI_API_KEY,
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: aiSearchPlanPromptFor(strategy) }] }],
@@ -665,15 +672,16 @@ export async function callGeminiForSearchPlanWithModel(strategy, model) {
     status: "ok",
     durationMs: Date.now() - startedAt,
     queryCount: plan.queries.length,
+    keySource: apiKey && apiKey !== env.GEMINI_API_KEY ? "client" : "server",
   });
   return plan;
 }
 
-export async function callGeminiForSearchPlan(strategy) {
+export async function callGeminiForSearchPlan(strategy, apiKey = env.GEMINI_API_KEY) {
   let lastError = null;
   for (const model of searchPlanModelChain()) {
     try {
-      const plan = await callGeminiForSearchPlanWithModel(strategy, model);
+      const plan = await callGeminiForSearchPlanWithModel(strategy, model, apiKey);
       return { ...plan, model };
     } catch (error) {
       lastError = error;
@@ -697,8 +705,10 @@ export async function buildAiSearchPlan(req) {
   const payload = await readRequestJson(req, 120_000);
   const strategy = payload.strategy && typeof payload.strategy === "object" ? payload.strategy : {};
   const model = searchPlanModelChain()[0];
+  const clientKey = apiKeyFromRequest(req);
+  const effectiveKey = clientKey || env.GEMINI_API_KEY;
 
-  if (!env.GEMINI_API_KEY) {
+  if (!effectiveKey) {
     writeDiagnostic("ai", {
       action: "search-plan",
       model,
@@ -717,7 +727,7 @@ export async function buildAiSearchPlan(req) {
   }
 
   try {
-    const plan = await callGeminiForSearchPlan(strategy);
+    const plan = await callGeminiForSearchPlan(strategy, effectiveKey);
     return {
       configured: true,
       provider: "Gemini",
@@ -754,8 +764,10 @@ export async function analyzeJobsWithGemini(req) {
   const preferenceMemory = payload.preferenceMemory && typeof payload.preferenceMemory === "object" ? payload.preferenceMemory : null;
   const strategyHash = boundedString(payload.strategyHash) || hashString(JSON.stringify(strategy));
   const model = geminiModelChain()[0] || GEMINI_MODEL;
+  const clientKey = apiKeyFromRequest(req);
+  const effectiveKey = clientKey || env.GEMINI_API_KEY;
 
-  if (!env.GEMINI_API_KEY) {
+  if (!effectiveKey) {
     writeDiagnostic("ai", {
       action: "analyze-jobs",
       model,
@@ -805,7 +817,7 @@ export async function analyzeJobsWithGemini(req) {
   let usedModel = model;
   if (validJobs.length) {
     try {
-      const result = await callGeminiForJobs(validJobs, strategy, strategyHash, preferenceMemory);
+      const result = await callGeminiForJobs(validJobs, strategy, strategyHash, preferenceMemory, effectiveKey);
       reviews = reviews.concat(result.reviews);
       top3Comparison = result.top3Comparison;
       usedModel = result.model || result.reviews.find((review) => review.status === "done")?.model || model;
