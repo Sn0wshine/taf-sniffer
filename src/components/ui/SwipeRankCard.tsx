@@ -9,13 +9,23 @@ export function SwipeRankCard({
   selected,
   onSelect,
   onSwipe,
+  onToggleFavorite,
+  onToggleExplore,
+  onToggleIgnore,
   currentStatus,
+  isFavorite,
+  isIgnored,
   children,
 }: {
   selected: boolean;
   onSelect: () => void;
   onSwipe: (action: SwipeRankAction) => void;
+  onToggleFavorite?: () => void;
+  onToggleExplore?: () => void;
+  onToggleIgnore?: () => void;
   currentStatus?: ReviewStatus;
+  isFavorite?: boolean;
+  isIgnored?: boolean;
   children: ReactNode;
 }) {
   const [dragX, setDragX] = useState(0);
@@ -34,7 +44,7 @@ export function SwipeRankCard({
     setDragX(0);
   };
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     pointerIdRef.current = event.pointerId;
     startRef.current = { x: event.clientX, y: event.clientY };
@@ -43,7 +53,7 @@ export function SwipeRankCard({
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
-  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (pointerIdRef.current !== event.pointerId) return;
     const dx = event.clientX - startRef.current.x;
     const dy = event.clientY - startRef.current.y;
@@ -58,7 +68,7 @@ export function SwipeRankCard({
     setDragX(nextDragX);
   };
 
-  const handlePointerEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (pointerIdRef.current !== event.pointerId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     const finalDragX = dragXRef.current;
@@ -91,10 +101,18 @@ export function SwipeRankCard({
         <Trash2 size={16} />
         <span>Ignorer</span>
       </div>
-      <button
+      <div
         className={`rank-card ${selected ? "selected" : ""} ${draggingRef.current ? "dragging" : ""}`}
+        role="button"
+        tabIndex={0}
         onClick={() => {
           if (!swipedRef.current) onSelect();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
         }}
         onPointerCancel={resetDrag}
         onPointerDown={handlePointerDown}
@@ -103,7 +121,50 @@ export function SwipeRankCard({
         style={{ transform: dragX ? `translateX(${dragX}px)` : undefined }}
       >
         {children}
-      </button>
+        {(onToggleFavorite || onToggleExplore || onToggleIgnore) && (
+          <span className="rank-card-hover-actions" onClick={(e) => e.stopPropagation()}>
+            {onToggleFavorite && (
+              <button
+                type="button"
+                className={`card-hover-btn star ${isFavorite ? "active" : ""}`}
+                title={isFavorite ? "Retirer des favoris" : "Marquer favori (F)"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite();
+                }}
+              >
+                <Star size={13} fill={isFavorite ? "currentColor" : "none"} />
+              </button>
+            )}
+            {onToggleExplore && (
+              <button
+                type="button"
+                className={`card-hover-btn explore ${currentStatus === "a_creuser" ? "active" : ""}`}
+                title={currentStatus === "a_creuser" ? "Déjà à creuser" : "Mettre à creuser (C)"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExplore();
+                }}
+              >
+                <ListFilter size={13} />
+              </button>
+            )}
+            {onToggleIgnore && (
+              <button
+                type="button"
+                className={`card-hover-btn ignore ${isIgnored ? "active" : ""}`}
+                title={isIgnored ? "Restaurer l'offre" : "Ignorer l'offre (I)"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleIgnore();
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

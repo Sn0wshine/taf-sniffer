@@ -41,9 +41,9 @@ export function SimpleIntro() {
   return (
     <section className="simple-intro">
       <div>
-        <p className="eyebrow">Assistant IA</p>
-        <h2>Décris ce que tu cherches, puis lance la recherche.</h2>
-        <p>L'assistant transforme ton intention métier en requêtes utiles, importe les offres lisibles, puis Gemini aide à classer sans multiplier les appels.</p>
+        <p className="eyebrow">Recherche guidée</p>
+        <h2>Décris le poste que tu cherches, puis lance la recherche.</h2>
+        <p>La recherche et le classement local fonctionnent sans clé API. Gemini peut ensuite enrichir les requêtes et l'analyse si tu le souhaites.</p>
       </div>
     </section>
   );
@@ -428,6 +428,11 @@ export function SimpleSearchPanel({
             )}
           </div>
           <div className="assistant-collapsed-actions">
+            {hasSavedJobs && (
+              <button className="primary-button compact" type="button" onClick={onShowHistory}>
+                Voir les offres ({analyses.length})
+              </button>
+            )}
             <HelpTooltip tooltip="Relance la recherche avec les critères actuels.">
               <button className={`ghost-button compact ${loadingAction === "run-search" ? "is-loading" : ""}`} onClick={onRunSearch}>
                 {loadingAction === "run-search" && <span className="button-spinner" aria-hidden="true" />}
@@ -547,7 +552,7 @@ export function SimpleSearchPanel({
                       </div>
                       <input
                         value={strategy.targetJob}
-                        placeholder="Exemple : diagnostiqueur immobilier, auditeur..."
+                        placeholder="Exemple : développeur, infirmier, commercial..."
                         onChange={(event) => {
                           onUpdateStrategy({ targetJob: event.target.value });
                           setActiveSuggestionField("job");
@@ -570,7 +575,7 @@ export function SimpleSearchPanel({
                     <textarea
                       rows={4}
                       value={strategy.assistantIntent}
-                      placeholder="Exemple : je cherche un poste terrain accessible en reconversion, avec formation interne, pas commercial pur, proche diagnostic immo ou audit énergétique."
+                      placeholder="Exemple : CDI hybride, horaires réguliers, évolution possible, proche de chez moi..."
                       onChange={(event) => onUpdateStrategy({ assistantIntent: event.target.value })}
                       onKeyDown={handleEnterAdvance}
                     />
@@ -684,7 +689,7 @@ export function SimpleSearchPanel({
                     />
                   </div>
                   <div className="smart-field">
-                    <FieldHelp label="Expérience" hint="recherche" tooltip="Expérience : aide à distinguer reconversion, junior ou confirmé. En reconversion, les offres avec formation claire remontent mieux." />
+                    <FieldHelp label="Expérience" hint="recherche" tooltip="Expérience : aide à classer les offres selon ton niveau. Le choix est facultatif." />
                     <select
                       value={strategy.experienceLevel}
                       onChange={(event) => {
@@ -904,7 +909,7 @@ export function SimpleSearchPanel({
       </details>
 
       <div className="simple-action-row">
-        <HelpTooltip tooltip="Lance la collecte : l'assistant prépare un plan IA une seule fois, cherche les offres, puis le classement utilise Gemini si disponible.">
+        <HelpTooltip tooltip="Lance la collecte : les variantes locales fonctionnent sans API. Gemini enrichit la recherche et le classement s'il est disponible.">
           <button className={`primary-button one-button ${loadingAction === "run-search" ? "is-loading" : ""}`} onClick={runPrimaryAssistantAction} disabled={!canSearch}>
             {loadingAction === "run-search" && <span className="button-spinner" aria-hidden="true" />}
             {primaryAssistantLabel}
@@ -931,7 +936,7 @@ export function SimpleSearchPanel({
               disabled={aiButtonDisabled}
             >
               {loadingAction === "ai-analyze" && <span className="button-spinner" aria-hidden="true" />}
-              Analyser avec IA
+              Rechercher des offres
             </button>
           </HelpTooltip>
         )}

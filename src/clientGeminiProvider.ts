@@ -139,7 +139,7 @@ export const buildLocalGeminiSearchPlan = async (strategy: Strategy, apiKey: str
   });
 
 const reviewPrompt = (input: Omit<LocalGeminiAnalyzeInput, "apiKey">) => {
-  const radarAxes = input.strategy.radarAxes || ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"];
+  const radarAxes = input.strategy.radarAxes || ["Adéquation", "Salaire", "Contrat", "Évolution", "Risque"];
   return `Tu analyses des offres d'emploi pour Taf Sniffer.
 Réponds uniquement en JSON valide, sans markdown.
 
@@ -181,7 +181,7 @@ Format attendu :
 
 Règles :
 - Utilise les localAnalysis fournies, mais corrige ton jugement avec le texte brut si nécessaire.
-- Favorise formation claire, stabilité, compatibilité reconversion, salaire lisible et faible risque.
+- Favorise l'adéquation au métier, la stabilité, le salaire lisible, la qualité de l'annonce et le faible risque. Considère formation, reconversion et évolution seulement si elles sont pertinentes dans la stratégie.
 - Pénalise indépendant imposé, salaire flou, variable dominant, formation à payer ou incompatibilité avec les critères.
 - Pour chacun des axes personnalisés de radarAxes spécifiés (${radarAxes.join(", ")}), attribue un score de 0 à 100 dans l'objet customAxesScores.
 - aiRankScore et salaryRankScore doivent être entre 0 et 100.`;

@@ -122,10 +122,13 @@ export function useJobs(strategy: Strategy, aiMode: AIMode) {
     });
   }, [sortedAnalyses, filter, rankingSearch, strategy.hideWeakOffers]);
 
-  const selectedItem = useMemo(
-    () => analyses.find((item) => item.job.id === selectedId) ?? null,
-    [analyses, selectedId],
-  );
+  const selectedItem = useMemo(() => {
+    if (filteredAnalyses.length === 0) return null;
+    if (!selectedId) return filteredAnalyses[0] ?? null;
+    const foundInFiltered = filteredAnalyses.find((item) => item.job.id === selectedId);
+    if (foundInFiltered) return foundInFiltered;
+    return filteredAnalyses[0] ?? null;
+  }, [filteredAnalyses, selectedId]);
 
   const updateJob = (id: string, patch: Partial<JobRecord>) => {
     setJobs((current) =>
@@ -185,8 +188,12 @@ export function useJobs(strategy: Strategy, aiMode: AIMode) {
     } else {
       newStatus = "ignoree";
     }
+    const currentIdx = filteredAnalyses.findIndex((item) => item.job.id === id);
+    const nextItem = filteredAnalyses[currentIdx + 1] ?? filteredAnalyses[currentIdx - 1] ?? null;
     updateJob(id, reviewPatch(newStatus));
-    if (selectedId === id) setSelectedId(null);
+    if (selectedId === id && nextItem) {
+      setSelectedId(nextItem.job.id);
+    }
     return newStatus;
   };
 

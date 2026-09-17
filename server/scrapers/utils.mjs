@@ -171,17 +171,34 @@ export function hasPoeiEquivalentSignal(value) {
     text.includes("formation gratuite") ||
     text.includes("formation offerte") ||
     text.includes("formation interne") ||
+    text.includes("formation en interne") ||
+    text.includes("formation continue") ||
+    text.includes("formation initiale") ||
     text.includes("parcours certifiant") ||
     text.includes("parcours qualifiant") ||
+    text.includes("parcours de formation") ||
+    text.includes("titre professionnel") ||
     text.includes("financement opco") ||
     text.includes("financement france travail") ||
     text.includes("financement pole emploi") ||
     text.includes("abondement cpf") ||
     text.includes("certification prise en charge") ||
     text.includes("certifications prises en charge") ||
+    text.includes("certification offerte") ||
+    text.includes("accompagnement a la certification") ||
     text.includes("nous vous formons") ||
     text.includes("nous formons") ||
-    text.includes("debutant accepte formation") ||
+    text.includes("nous vous accompagnons") ||
+    text.includes("debutant accepte") ||
+    text.includes("debutants acceptes") ||
+    text.includes("profil debutant") ||
+    text.includes("profil junior") ||
+    text.includes("debutant bienvenu") ||
+    text.includes("sans experience") ||
+    text.includes("aucun diplome requis") ||
+    text.includes("reconversion") ||
+    text.includes("reconversion professionnelle") ||
+    text.includes("reconversion acceptee") ||
     text.includes("formation debutant") ||
     text.includes("formation employeur")
   );
@@ -210,42 +227,21 @@ export function applyRequiredTerms(keyword, requiredPoei, requiredAudit) {
 }
 
 export function expandRequiredTerms(keyword, requiredPoei, requiredAudit, smartSearch) {
-  let variants = [compact(keyword)];
-  if (requiredPoei && !hasPoeiOrEquivalentSignal(keyword)) {
-    const poeiTerms = smartSearch
-      ? [
-          "POEI",
-          "POEI individuelle",
-          "POEC",
-          "POE collective",
-          "POEIC",
-          "POE",
-          "AFPR",
-          "preparation operationnelle emploi",
-          "preparation operationnelle collective",
-          "formation prealable recrutement",
-          "formation avant embauche",
-          "formation de preparation",
-          "formation prise en charge",
-          "formation financee",
-          "financement France Travail",
-          "financement OPCO",
-          "certification prise en charge",
-          "formation assurée",
-          "formation assuree",
-          "formation assurée par nos soins",
-          "formation interne",
-          "débutant accepté formation",
-          "nous vous formons",
-        ]
-      : ["POEI"];
-    variants = variants.flatMap((variant) => poeiTerms.map((term) => compact(`${variant} ${term}`)));
+  const base = compact(keyword);
+  const variants = [base];
+  if (requiredPoei && !hasPoeiOrEquivalentSignal(base)) {
+    const poeiTerms = smartSearch ? ["POEI", "formation", "débutant", "reconversion"] : ["POEI"];
+    poeiTerms.forEach((term) => {
+      variants.push(compact(`${base} ${term}`));
+    });
   }
-  if (requiredAudit && !hasAuditSignal(keyword)) {
-    const auditTerms = smartSearch ? ["audit energetique", "renovation energetique", "DPE mention"] : ["audit energetique"];
-    variants = variants.flatMap((variant) => auditTerms.map((term) => compact(`${variant} ${term}`)));
+  if (requiredAudit && !hasAuditSignal(base)) {
+    const auditTerms = smartSearch ? ["audit énergétique", "rénovation énergétique"] : ["audit énergétique"];
+    auditTerms.forEach((term) => {
+      variants.push(compact(`${base} ${term}`));
+    });
   }
-  return variants.map((variant) => applyRequiredTerms(variant, requiredPoei, requiredAudit));
+  return unique(variants);
 }
 
 export function matchesRequiredSignals(job, requiredPoei, requiredAudit) {
@@ -793,12 +789,69 @@ export function extractionQuality({ title, company, location, contract, salary, 
   return { label, notes };
 }
 
-export function isImportable(job) {
+export const MARKETING_OR_NOISE_TITLES = [
+  "parlez-nous de vous",
+  "decouvrez vos matchs",
+  "laissez les jobs venir",
+  "decouvrez toutes les offres",
+  "offres d'emploi par",
+  "offres d'emploi en",
+  "categories d'emploi",
+  "trouvez votre prochain emploi",
+  "offres similaires",
+  "creer une alerte",
+  "abonnez-vous",
+  "recherche d'emploi",
+  "nos partenaires",
+  "a propos",
+  "mentions legales",
+  "politique de confidentialite",
+  "aide et contact",
+  "consultez les offres",
+  "offres recentes",
+  "voir plus d'offres",
+  "postuler directement",
+];
+
+export function isJobTitleRelevant(title, targetKeywords = "") {
+  const normTitle = normalized(title);
+  if (!normTitle || normTitle.length < 4) return false;
+  if (MARKETING_OR_NOISE_TITLES.some((noise) => normTitle.includes(noise))) return false;
+
+  const normTarget = normalized(targetKeywords);
+  if (!normTarget) return true;
+
+  if (normTarget.includes("diagnost") || normTarget.includes("dpe") || normTarget.includes("audit")) {
+    const diagnosticPositive = [
+      "diagnost", "diagnostic", "dpe", "amiante", "termites", "plomb", "gaz", "electricite",
+      "audit", "auditeur", "energetique", "renovation", "infiltrometr", "thermi",
+      "preleve", "technicien batiment", "controle technique", "constat", "etat des lieux", "pathologie", "technicien immobilier", "amo", "mesurage"
+    ];
+    const isPositive = diagnosticPositive.some((kw) => normTitle.includes(kw));
+
+    const diagnosticNegative = [
+      "analyst", "financier", "comptab", "jurist", "avocat", "notaire",
+      "negociateur", "agent commercial", "mandataire", "gestionnaire locatif", "gestionnaire de location", "charge de location", "conseiller immobilier", "agent immobilier",
+      "copropriete", "syndic", "developpeur", "software", "rh ", "ressources humaines",
+      "recruteur", "title examiner", "damage assessor", "underwriter", "valeur venale", "tresorerie", "credit",
+      "commercial", "franchise", "agroalimentaire", "couvreur", "zingueur", "etancheur", "maintenance industrielle", "process technique", "restauration", "cuisinier", "chauffeur", "livreur", "vendeur", "cariste", "infirmier", "agent de securite", "coordinateur technique"
+    ];
+    const isNegative = diagnosticNegative.some((kw) => normTitle.includes(kw));
+
+    if (isNegative && !isPositive) return false;
+    if (!isPositive) return false;
+  }
+
+  return true;
+}
+
+export function isImportable(job, targetKeywords = "") {
   if (!job || !job.rawText || job.rawText.length < 220) return false;
   if (isSearchResultUrl(job.sourceUrl || "")) return false;
   const title = firstMatch(job.rawText, [/Poste\s*:\s*(.+)/i, /Titre\s*:\s*(.+)/i, /Intitulé\s*:\s*(.+)/i]);
   const titleText = normalized(title);
   if (!titleText || titleText.length < 4 || ["offre importee", "recherche", "emploi", "annonce"].some((term) => titleText === term || titleText.includes(`${term} sans titre`))) return false;
+  if (!isJobTitleRelevant(title, targetKeywords)) return false;
   if (!compact(job.source || "")) return false;
   if (!job.sourceUrl) {
     return Boolean(job.searchUrl) && job.rawText.length >= 700 && title && !normalized(title).includes("offre importee");

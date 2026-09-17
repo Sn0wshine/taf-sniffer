@@ -6,7 +6,7 @@ import { compact, hashString, normalized, unique } from "../scrapers/utils.mjs";
 export const geminiUsage = new Map();
 
 export function apiKeyFromRequest(req) {
-  const raw = req?.headers?.["x-gemini-api-key"];
+  const raw = req?.headers?.["x-ai-api-key"] ?? req?.headers?.["x-gemini-api-key"];
   const value = Array.isArray(raw) ? raw[0] : raw;
   return typeof value === "string" ? value.trim().slice(0, 200) : "";
 }

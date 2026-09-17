@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { analyzeJob, createJobRecord, getControlledExtraction } from "../analysis";
 import { defaultStrategy } from "../appConstants";
 import type { Strategy } from "../types";
+import { getActiveProfile, GENERIC_PROFILE_ID } from "../jobProfiles";
 
 describe("Job Analysis & Scoring Engine", () => {
   const baseStrategy: Strategy = {
@@ -10,6 +11,24 @@ describe("Job Analysis & Scoring Engine", () => {
     salaryMin: 2000,
     experienceLevel: "debutant_reconversion",
   };
+
+  it("uses a neutral generic profile and local employment signals by default", () => {
+    const strategy = { ...defaultStrategy, targetJob: "Développeur frontend" };
+    const profile = getActiveProfile(strategy);
+    const analysis = analyzeJob(createJobRecord(`
+Poste : Développeur frontend junior
+Entreprise : Studio Web
+Lieu : Lyon
+Contrat : CDI
+Salaire : 42 000 € brut annuel
+Télétravail hybride, équipe produit et évolution possible.
+    `), strategy);
+
+    expect(profile.id).toBe(GENERIC_PROFILE_ID);
+    expect(analysis.positiveSignals).not.toContain("Débutant ou reconversion accepté");
+    expect(analysis.scoreLines.some((line) => line.label.includes("formation facilitée non confirmée"))).toBe(false);
+    expect(analysis.scores.salaryPackage).toBeGreaterThan(40);
+  });
 
   it("analyzes a well-structured diagnostic job offer with POEI and salary", () => {
     const rawOffer = `

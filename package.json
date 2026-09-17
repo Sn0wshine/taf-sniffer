@@ -1,7 +1,8 @@
 {
   "name": "taf-sniffer",
-  "private": true,
-  "version": "0.821",
+  "private": false,
+  "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

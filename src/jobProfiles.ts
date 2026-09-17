@@ -161,7 +161,7 @@ export const genericJobProfile: JobProfile = {
   },
 };
 
-export const jobProfiles = [diagnosticImmobilierProfile, genericJobProfile];
+export const jobProfiles = [genericJobProfile, diagnosticImmobilierProfile];
 
 export const inferProfileId = (strategy?: Partial<Pick<Strategy, "profileId" | "targetJob">>) => {
   const explicit = strategy?.profileId && strategy.profileId !== AUTO_PROFILE_ID
@@ -169,7 +169,7 @@ export const inferProfileId = (strategy?: Partial<Pick<Strategy, "profileId" | "
     : "";
   if (explicit) return explicit;
 
-  const target = normalizeProfileText(strategy?.targetJob || diagnosticImmobilierProfile.defaultTargetJob);
+  const target = normalizeProfileText(strategy?.targetJob || "");
   const diagnosticTerms = [
     ...diagnosticImmobilierProfile.search.triggerTerms,
     ...diagnosticImmobilierProfile.search.smartVariants,
@@ -180,4 +180,4 @@ export const inferProfileId = (strategy?: Partial<Pick<Strategy, "profileId" | "
 };
 
 export const getActiveProfile = (strategy?: Partial<Pick<Strategy, "profileId" | "targetJob">>): JobProfile =>
-  jobProfiles.find((profile) => profile.id === inferProfileId(strategy)) || diagnosticImmobilierProfile;
+  jobProfiles.find((profile) => profile.id === inferProfileId(strategy)) || genericJobProfile;

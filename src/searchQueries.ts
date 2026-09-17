@@ -186,7 +186,8 @@ export const buildKeywordVariants = (
   strategy?: Partial<Pick<Strategy, "profileId" | "targetJob">>,
 ) => {
   const profile = getActiveProfile({ ...strategy, targetJob });
-  const target = targetJob.trim() || profile.defaultTargetJob;
+  const target = targetJob.trim();
+  if (!target) return [];
   const base = [target, stripAccents(target)];
   const text = normalized(target);
 

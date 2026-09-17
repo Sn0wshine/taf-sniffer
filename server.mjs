@@ -17,6 +17,7 @@ import {
   geminiUsage,
   searchPlanModelChain,
 } from "./server/services/gemini.mjs";
+import { analyzeJobsWithCompatible, buildCompatibleAiSearchPlan } from "./server/services/openai-compatible.mjs";
 import { serveStatic } from "./server/static.mjs";
 
 const server = http.createServer(async (req, res) => {
@@ -68,11 +69,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && requestUrl.pathname === "/api/ai/analyze-jobs") {
-      return json(res, 200, await analyzeJobsWithGemini(req));
+      return json(res, 200, req.headers["x-ai-provider"] === "openai-compatible" ? await analyzeJobsWithCompatible(req) : await analyzeJobsWithGemini(req));
     }
 
     if (req.method === "POST" && requestUrl.pathname === "/api/ai/search-plan") {
-      return json(res, 200, await buildAiSearchPlan(req));
+      return json(res, 200, req.headers["x-ai-provider"] === "openai-compatible" ? await buildCompatibleAiSearchPlan(req) : await buildAiSearchPlan(req));
     }
 
     if (req.method === "GET" && requestUrl.pathname === "/api/company-info") {

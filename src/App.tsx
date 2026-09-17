@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Settings2, Sparkles } from "lucide-react";
+import { Check, RotateCcw, Settings2, Sparkles, Trash2 } from "lucide-react";
 import { APP_VERSION_LABEL } from "./appVersion";
 import {
   DEFAULT_AI_MODE,
+  API_KEY_STORAGE,
+  AI_PROVIDER_STORAGE,
+  AI_BASE_URL_STORAGE,
+  LOCAL_GEMINI_KEY,
   UI_KEY,
   aiModeDescriptions,
   aiModeLabels,
@@ -22,6 +26,7 @@ import { HelpTooltip } from "./components/ui/Tooltips";
 import { EmployerRankingCard } from "./components/ui/EmployerRankingCard";
 import { Top3AIComparisonCard } from "./components/ui/Top3AIComparisonCard";
 import { SimpleSearchPanel } from "./components/panels/SimpleSearchPanel";
+import { DashboardPanel } from "./components/panels/DashboardPanel";
 import { OfferComparisonView } from "./views/ComparisonView";
 import { ExpertView } from "./views/ExpertView";
 import { ResultsView } from "./views/ResultsView";
@@ -59,6 +64,9 @@ export function App() {
     window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || localStorage.getItem(LOCAL_GEMINI_KEY) || "");
+  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem(AI_PROVIDER_STORAGE) || "gemini");
+  const [aiBaseUrl, setAiBaseUrl] = useState(() => localStorage.getItem(AI_BASE_URL_STORAGE) || "");
   const [assistantRuntime, setAssistantRuntime] = useState<AssistantRuntimeState>("idle");
   const optionsMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -110,6 +118,7 @@ export function App() {
     openSearches,
     resetSourceHealth,
     resetSearchState,
+    aiAvailability: searchAiAvailability,
   } = useJobSearch();
 
   const {
@@ -120,7 +129,10 @@ export function App() {
     analyzeJobsWithAi,
     rankEmployers,
     fetchCompanyProfile,
+    aiAvailability: reviewAiAvailability,
   } = useAiReview();
+
+  const aiAvailability = reviewAiAvailability !== "unknown" ? reviewAiAvailability : searchAiAvailability;
 
   const { exportBackup, importBackup } = useBackup({
     jobs,
@@ -171,6 +183,9 @@ export function App() {
     const outcome = await runSearch({
       strategy,
       jobs,
+      apiKey,
+      aiProvider,
+      aiBaseUrl,
       onImportRecords: (records, _msg, meta) => addJobRecords(records, meta),
       onImportOffers: (text, meta) => addOffers(text, meta),
     });
@@ -178,10 +193,16 @@ export function App() {
     if (outcome) {
       setAssistantRuntime("collapsed");
       setUiState((curr) => ({ ...curr, searchReady: true }));
+      if (outcome.targetMergedJobs.length > 0) {
+        setAppView("results");
+      }
       if (uiState.aiMode !== "local" && outcome.targetMergedJobs.length > 0) {
         await analyzeJobsWithAi({
           candidates: outcome.targetMergedJobs.filter((j) => !j.ignored).slice(0, 10),
           strategy,
+          apiKey,
+          aiProvider,
+          aiBaseUrl,
           onUpdateJob: updateJob,
         });
       }
@@ -196,6 +217,9 @@ export function App() {
     await analyzeJobsWithAi({
       candidates,
       strategy,
+      apiKey,
+      aiProvider,
+      aiBaseUrl,
       onUpdateJob: updateJob,
       onProgress: setStatusMessage,
     });
@@ -211,6 +235,61 @@ export function App() {
   const copyText = async (text: string, msg: string) => {
     await navigator.clipboard.writeText(text);
     setStatusMessage(msg);
+  };
+
+  const [confirmAction, setConfirmAction] = useState<"purge" | "full" | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const confirmTimeoutRef = useRef<number | null>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  const triggerConfirm = (action: "purge" | "full") => {
+    if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+    setConfirmAction(action);
+    confirmTimeoutRef.current = window.setTimeout(() => {
+      setConfirmAction(null);
+    }, 4000);
+  };
+
+  const showFeedback = (msg: string) => {
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    setActionFeedback(msg);
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      setActionFeedback(null);
+    }, 4000);
+  };
+
+  const handlePurgeJobsOnly = () => {
+    if (confirmAction !== "purge") {
+      triggerConfirm("purge");
+      return;
+    }
+    setConfirmAction(null);
+    const count = jobs.length;
+    purgeJobs();
+    resetSearchState();
+    setAssistantRuntime("idle");
+    showFeedback(`✓ ${count} annonce${count > 1 ? "s" : ""} effacée${count > 1 ? "s" : ""}`);
+  };
+
+  const handleFullReset = () => {
+    if (confirmAction !== "full") {
+      triggerConfirm("full");
+      return;
+    }
+    setConfirmAction(null);
+    purgeJobs();
+    resetCriteria();
+    resetSearchState();
+    resetSourceHealth();
+    localStorage.removeItem("sniffer.jobs");
+    localStorage.removeItem("sniffer.strategy");
+    localStorage.removeItem("sniffer.search.session");
+    localStorage.removeItem("sniffer.top3.comparison");
+    localStorage.removeItem("sniffer.source.health");
+    localStorage.removeItem("sniffer.dictionary");
+    localStorage.removeItem("sniffer.market.stats");
+    setAssistantRuntime("idle");
+    showFeedback("✓ Données réinitialisées");
   };
 
   const reviewCount = analyses.filter(({ job }) => normalizeReviewStatus(job) === "a_traiter" && !job.ignored).length;
@@ -242,6 +321,13 @@ export function App() {
         </nav>
 
         <div className="topbar-actions">
+          <div className="topbar-stats" aria-label="Synthèse">
+            <span onClick={() => { setFilter("to_review"); setAppView("results"); }}>{reviewCount} à traiter</span>
+            <span onClick={() => { setFilter("to_explore"); setAppView("results"); }}>{exploreCount} à creuser</span>
+            <span onClick={() => { setFilter("ignored"); setAppView("results"); }}>{ignoredCount} ignorées</span>
+            <span onClick={() => setAppView("results")}>{topPicks.length} priorités</span>
+          </div>
+
           <button
             className="icon-button"
             onClick={() => setDarkMode((d) => !d)}
@@ -269,6 +355,7 @@ export function App() {
                   <strong>Options</strong>
                   <span>{appViewLabels[activeView]} · {aiModeLabels[uiState.aiMode]}</span>
                 </div>
+
                 <div className="options-section">
                   <span>Moteur d'analyse IA</span>
                   <div className="options-choice-list">
@@ -285,15 +372,72 @@ export function App() {
                     ))}
                   </div>
                 </div>
+
+                <div className="options-section local-gemini-section">
+                  <span>Fournisseur IA et clé API facultative</span>
+                  <small>Sans clé : recherche, import et analyse locale restent disponibles.</small>
+                  <select value={aiProvider} onChange={(event) => { setAiProvider(event.target.value); localStorage.setItem(AI_PROVIDER_STORAGE, event.target.value); }} aria-label="Fournisseur IA">
+                    <option value="gemini">Gemini</option>
+                    <option value="openai-compatible">Endpoint compatible OpenAI</option>
+                  </select>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    placeholder="Clé API"
+                    autoComplete="off"
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setApiKey(value);
+                      if (value.trim()) localStorage.setItem(API_KEY_STORAGE, value.trim());
+                      else localStorage.removeItem(API_KEY_STORAGE);
+                    }}
+                    aria-label="Clé API facultative"
+                  />
+                  {aiProvider === "openai-compatible" && <input type="url" value={aiBaseUrl} placeholder="URL de base API (optionnel)" onChange={(event) => { setAiBaseUrl(event.target.value); localStorage.setItem(AI_BASE_URL_STORAGE, event.target.value); }} aria-label="URL de base API" />}
+                </div>
+
+                <div className="options-section">
+                  <span>Gestion des données</span>
+                  <div className="options-data-actions">
+                    <button
+                      type="button"
+                      className={`options-danger-btn ${confirmAction === "purge" ? "confirming" : ""}`}
+                      onClick={handlePurgeJobsOnly}
+                      disabled={jobs.length === 0 && confirmAction !== "purge"}
+                      title="Supprime toutes les offres collectées"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                      <span>
+                        {confirmAction === "purge"
+                          ? "Confirmer la suppression ?"
+                          : `Vider les annonces (${jobs.length})`}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`options-danger-btn full-reset ${confirmAction === "full" ? "confirming" : ""}`}
+                      onClick={handleFullReset}
+                      title="Efface les offres et réinitialise tous les critères"
+                    >
+                      <RotateCcw size={14} aria-hidden="true" />
+                      <span>
+                        {confirmAction === "full"
+                          ? "Confirmer la remise à zéro ?"
+                          : "Remise à zéro complète"}
+                      </span>
+                    </button>
+
+                    {actionFeedback && (
+                      <div className="options-success-badge" role="status">
+                        <Check size={14} aria-hidden="true" />
+                        <span>{actionFeedback}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
-          </div>
-
-          <div className="topbar-stats" aria-label="Synthèse">
-            <span onClick={() => { setFilter("to_review"); setAppView("results"); }}>{reviewCount} à traiter</span>
-            <span onClick={() => { setFilter("to_explore"); setAppView("results"); }}>{exploreCount} à creuser</span>
-            <span onClick={() => { setFilter("ignored"); setAppView("results"); }}>{ignoredCount} ignorées</span>
-            <span onClick={() => setAppView("results")}>{topPicks.length} priorités</span>
           </div>
         </div>
       </header>
@@ -306,8 +450,27 @@ export function App() {
         </div>
       )}
 
+      {aiAvailability === "missing_key" && uiState.aiMode !== "local" && !aiFallbackMessage && (
+        <div className="local-mode-banner" role="status">
+          Mode local actif : ajoute une clé Gemini dans Options seulement si tu veux l'analyse enrichie.
+        </div>
+      )}
+
       <main className="workspace">
-        {activeView === "assistant" && (
+        {activeView === "assistant" && assistantRuntime === "idle" && (
+          <DashboardPanel
+            offerCount={analyses.length}
+            reviewCount={reviewCount}
+            exploreCount={exploreCount}
+            priorityCount={topPicks.length}
+            lastSearchSession={lastSearchSession}
+            onStartSearch={handleLaunchAssistant}
+            onShowResults={() => setAppView("results")}
+            onShowTools={() => setAppView("expert")}
+          />
+        )}
+
+        {activeView === "assistant" && assistantRuntime !== "idle" && (
           <div className="assistant-view-container">
             <SimpleSearchPanel
               analyses={analyses}

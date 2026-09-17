@@ -76,29 +76,33 @@ export async function searchPublicJobs(requestUrl) {
     rawValues.push(value);
   });
   const sourceReports = rawValues.map((value) => {
-    const strictJobs = value.jobs.filter((job) => matchesRequiredSignals(job, requiredPoei, requiredAudit));
-    const strictSkipped = value.jobs.length - strictJobs.length;
-    const requirementMessage = strictSkipped
-      ? ` ${strictSkipped} écartée${strictSkipped > 1 ? "s" : ""} par filtre obligatoire.`
+    const matchingJobs = value.jobs.filter((job) => matchesRequiredSignals(job, requiredPoei, requiredAudit));
+    const otherJobs = value.jobs.filter((job) => !matchesRequiredSignals(job, requiredPoei, requiredAudit));
+    const prioritizedJobs = matchingJobs.length > 0 ? [...matchingJobs, ...otherJobs] : value.jobs;
+    const finalJobs = prioritizedJobs.slice(0, perSourceLimit);
+    const countWithSignals = matchingJobs.length;
+    const requirementMessage = (requiredPoei || requiredAudit) && countWithSignals > 0
+      ? ` (${countWithSignals} avec signal${countWithSignals > 1 ? "s" : ""} de formation/audit)`
       : "";
+
     return {
       ...value,
-      jobs: strictJobs,
-      skippedCount: Number(value.skippedCount || 0) + strictSkipped,
+      jobs: finalJobs,
+      skippedCount: Number(value.skippedCount || 0),
       foundCount: Number(value.foundCount || 0),
       detailLinkCount: Number(value.detailLinkCount || 0),
       missingDetailCount: Number(value.missingDetailCount || 0),
       poorQualityCount: Number(value.poorQualityCount || 0),
       networkErrorCount: Number(value.networkErrorCount || 0),
-      requiredFilterCount: strictSkipped,
-      status: strictJobs.length ? value.status : value.status === "blocked" ? "blocked" : "empty",
-      message: `${sourceReportMessageClean(value.source, strictJobs.length ? value.status : value.status === "blocked" ? "blocked" : "empty", {
-        count: strictJobs.length,
+      requiredFilterCount: 0,
+      status: finalJobs.length ? value.status : value.status === "blocked" ? "blocked" : "empty",
+      message: `${sourceReportMessageClean(value.source, finalJobs.length ? value.status : value.status === "blocked" ? "blocked" : "empty", {
+        count: finalJobs.length,
         foundCount: Number(value.foundCount || 0),
         detailLinkCount: Number(value.detailLinkCount || 0),
         missingDetailCount: Number(value.missingDetailCount || 0),
         poorQualityCount: Number(value.poorQualityCount || 0),
-        skippedCount: Number(value.skippedCount || 0) + strictSkipped,
+        skippedCount: Number(value.skippedCount || 0),
       })}${requirementMessage}`,
     };
   });
@@ -116,20 +120,26 @@ export async function searchPublicJobs(requestUrl) {
   }
   const urlSeen = new Set();
   const fpMap = new Map();
-  for (const report of sourceReports) {
-    for (const job of report.jobs) {
-      const urlKey = job.sourceUrl || job.sourceId;
-      if (urlKey && urlSeen.has(urlKey)) continue;
-      if (urlKey) urlSeen.add(urlKey);
-      const fp = jobFingerprint(job.rawText || "");
-      const mapKey = fp || `_${urlKey || Math.random().toString(36)}`;
-      if (fp && fpMap.has(fp)) {
-        const primary = fpMap.get(fp);
-        if (!primary.alsoFoundOn) primary.alsoFoundOn = [];
-        primary.alsoFoundOn.push(job.source || "autre source");
-      } else {
-        fpMap.set(mapKey, job);
-      }
+  const allCandidateJobs = sourceReports.flatMap((r) => r.jobs);
+  const prioritizedAll = (requiredPoei || requiredAudit)
+    ? [
+        ...allCandidateJobs.filter((j) => matchesRequiredSignals(j, requiredPoei, requiredAudit)),
+        ...allCandidateJobs.filter((j) => !matchesRequiredSignals(j, requiredPoei, requiredAudit)),
+      ]
+    : allCandidateJobs;
+
+  for (const job of prioritizedAll) {
+    const urlKey = job.sourceUrl || job.sourceId;
+    if (urlKey && urlSeen.has(urlKey)) continue;
+    if (urlKey) urlSeen.add(urlKey);
+    const fp = jobFingerprint(job.rawText || "");
+    const mapKey = fp || `_${urlKey || Math.random().toString(36)}`;
+    if (fp && fpMap.has(fp)) {
+      const primary = fpMap.get(fp);
+      if (!primary.alsoFoundOn) primary.alsoFoundOn = [];
+      primary.alsoFoundOn.push(job.source || "autre source");
+    } else {
+      fpMap.set(mapKey, job);
     }
   }
   const jobs = [...fpMap.values()].slice(0, limit);

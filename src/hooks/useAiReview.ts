@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { TOP3_AI_KEY } from "../appConstants";
+import type { AiAvailability } from "../appConstants";
 import type { AnalysisItem } from "../appConstants";
 import { proxyBase } from "../searchProvider";
 import type {
@@ -50,6 +51,7 @@ export function useAiReview() {
   const [companyCache, setCompanyCache] = useState<Record<string, CompanyEnrichment | "loading" | "error">>({});
   const [aiFallbackMessage, setAiFallbackMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [aiAvailability, setAiAvailability] = useState<AiAvailability>("unknown");
 
   useEffect(() => {
     if (lastTop3AiComparison) localStorage.setItem(TOP3_AI_KEY, JSON.stringify(lastTop3AiComparison));
@@ -90,13 +92,17 @@ export function useAiReview() {
   const analyzeJobsWithAi = async ({
     candidates,
     strategy,
-    localGeminiKey = "",
+    apiKey = "",
+    aiProvider = "gemini",
+    aiBaseUrl = "",
     onUpdateJob,
     onProgress,
   }: {
     candidates: JobRecord[];
     strategy: Strategy;
-    localGeminiKey?: string;
+    apiKey?: string;
+    aiProvider?: string;
+    aiBaseUrl?: string;
     onUpdateJob: (id: string, patch: Partial<JobRecord>) => void;
     onProgress?: (msg: string) => void;
   }) => {
@@ -134,7 +140,9 @@ export function useAiReview() {
           signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
-            ...(localGeminiKey ? { "x-gemini-api-key": localGeminiKey } : {}),
+            ...(apiKey ? { "x-ai-api-key": apiKey } : {}),
+            "x-ai-provider": aiProvider,
+            ...(aiBaseUrl ? { "x-ai-base-url": aiBaseUrl } : {}),
           },
           body: JSON.stringify({
             jobs: batch.map((job) => ({
@@ -152,6 +160,7 @@ export function useAiReview() {
 
         const payload = await response.json().catch(() => null);
         if (!response.ok) throw new Error(payload?.error?.message || "Analyse IA échouée.");
+        setAiAvailability("available");
 
         const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
         for (const rawReview of reviews) {
@@ -167,7 +176,20 @@ export function useAiReview() {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Erreur Gemini";
-        setAiFallbackMessage(message);
+        const normalizedMessage = message.toLowerCase();
+        const availability: AiAvailability = normalizedMessage.includes("clé") || normalizedMessage.includes("api_key")
+          ? "missing_key"
+          : normalizedMessage.includes("quota") || normalizedMessage.includes("429")
+            ? "quota"
+            : normalizedMessage.includes("proxy") || normalizedMessage.includes("fetch")
+              ? "proxy_unavailable"
+              : "unavailable";
+        setAiAvailability(availability);
+        setAiFallbackMessage(availability === "missing_key"
+          ? "L'analyse enrichie est indisponible sans clé API. Le classement local reste disponible."
+          : availability === "quota"
+            ? "Le quota IA est atteint. Le classement local reste disponible ; réessaie plus tard."
+            : "L'analyse enrichie est indisponible. Le classement local reste disponible.");
         for (const job of batch) {
           onUpdateJob(job.id, {
             aiReview: {
@@ -230,6 +252,7 @@ export function useAiReview() {
     aiFallbackMessage,
     setAiFallbackMessage,
     loading,
+    aiAvailability,
     analyzeJobsWithAi,
     rankEmployers,
     fetchCompanyProfile,

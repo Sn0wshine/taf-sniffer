@@ -35,12 +35,16 @@ export const SESSION_KEY = "taf-sniffer.lastSearchSession.v1";
 export const TOP3_AI_KEY = "taf-sniffer.top3-ai-comparison.v1";
 export const SOURCE_HEALTH_KEY = "taf-sniffer.sourceHealthStats.v1";
 export const DICTIONARY_RECENTS_KEY = "taf-sniffer.dictionaryRecents.v1";
+export const API_KEY_STORAGE = "taf-sniffer.apiKey.v1";
+export const AI_PROVIDER_STORAGE = "taf-sniffer.aiProvider.v1";
+export const AI_BASE_URL_STORAGE = "taf-sniffer.aiBaseUrl.v1";
 export const LOCAL_GEMINI_KEY = "taf-sniffer.localGemini.v1";
 export const COLLECTION_TARGET = 20;
 export const BACKUP_VERSION = 1;
 export const SOURCE_HEALTH_HISTORY_LIMIT = 12;
 export const LEGACY_DEFAULT_TARGET_JOB = "Diagnostiqueur immobilier";
 export const LEGACY_DEFAULT_SALARY_MIN = 1800;
+export const DEFAULT_RADAR_AXES = ["Adéquation", "Salaire", "Contrat", "Évolution", "Risque"];
 export const RANK_SWIPE_THRESHOLD = 72;
 export const RANK_SWIPE_MAX = 130;
 
@@ -49,25 +53,25 @@ export const defaultStrategy: Strategy = {
   targetJob: "",
   location: "",
   salaryMin: 0,
-  experienceLevel: "debutant_reconversion",
+  experienceLevel: "indifferent",
   contractPreference: "any",
   hideWeakOffers: false,
-  poeiRequirement: "prefer",
-  auditRequirement: "prefer",
+  poeiRequirement: "off",
+  auditRequirement: "off",
   independentRequirement: "prefer",
   objective: "",
   assistantIntent: "",
   assistantSummary: "",
   aiSearchQueries: [],
   aiSearchPlanCheckedAt: "",
-  priorityTraining: true,
-  priorityPoei: true,
-  prioritySalary: true,
-  priorityAudit: true,
-  rejectIndependent: true,
+  priorityTraining: false,
+  priorityPoei: false,
+  prioritySalary: false,
+  priorityAudit: false,
+  rejectIndependent: false,
   smartSearch: true,
   smartLocation: true,
-  radarAxes: ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"],
+  radarAxes: DEFAULT_RADAR_AXES,
 };
 
 export type RankingFilter = "new" | "to_review" | "to_explore" | "favorites" | "ignored" | "formation" | "all";
@@ -82,6 +86,8 @@ export type StoredUiState = {
   aiAutoAnalyze: boolean;
   aiMode: AIMode;
 };
+export type AiAvailability = "unknown" | "available" | "missing_key" | "invalid_key" | "quota" | "proxy_unavailable" | "unavailable";
+export type AiProviderId = "gemini" | "openai-compatible";
 export type AssistantRuntimeState = "idle" | "introFading" | "active" | "searching" | "collapsed";
 export type DictionaryField = "job" | "zone";
 export type SwipeRankAction = "explore" | "ignore";
@@ -99,28 +105,28 @@ export const FACILITATED_TRAINING_LABEL = "Formation facilitée";
 
 export const aiModeLabels: Record<AIMode, string> = {
   ai_top10: "IA Top 10",
-  ai_full: "IA complète",
-  local: "Local rapide",
+  ai_full: "Analyse enrichie par IA",
+  local: "Analyse locale",
 };
 
 export const aiModeDescriptions: Record<AIMode, string> = {
   ai_top10: "Gemini retrie les 10 meilleures offres présélectionnées localement.",
-  ai_full: "Gemini analyse toutes les offres par lots de 25.",
-  local: "Aucun appel Gemini automatique, tri local uniquement.",
+  ai_full: "Gemini analyse toutes les offres par lots de 25, avec le score local en garde-fou.",
+  local: "Aucun appel IA automatique : recherche et classement locaux complets.",
 };
 
 export const appViewLabels: Record<AppView, string> = {
   assistant: "Assistant",
   results: "Résultats",
   comparison: "Comparaison",
-  expert: "Mode expert",
+  expert: "Outils avancés",
 };
 
 export const appViewDescriptions: Record<AppView, string> = {
-  assistant: "Recherche guidée et intention métier.",
+  assistant: "Tableau de bord et recherche guidée.",
   results: "Classement et analyse des offres collectées.",
   comparison: "Comparaison côte à côte des meilleures offres.",
-  expert: "Atelier technique et réglages fins.",
+  expert: "Outils avancés et réglages fins.",
 };
 
 export const expertTabLabels: Record<ExpertTab, string> = {

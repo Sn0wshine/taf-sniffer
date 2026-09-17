@@ -57,7 +57,7 @@ export const PUBLIC_SOURCES = [
   {
     name: "LinkedIn",
     searchUrl: (keywords, location) =>
-      `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(keywords)}&location=${encodeURIComponent(location)}&start=0`,
+      `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(keywords)}&location=${encodeURIComponent(location || "France")}&geoId=105015875&start=0`,
     linkPatterns: [/href="([^"]*\/jobs\/view\/[^"?]+[^"]*)"/gi, /data-entity-urn="urn:li:jobPosting:(\d+)"/gi],
   },
   {
@@ -228,7 +228,7 @@ export function parseJobPage(source, url, html) {
   };
 }
 
-export function parseInlineCards(source, html, searchUrl, limit) {
+export function parseInlineCards(source, html, searchUrl, limit, targetKeywords = "") {
   if (normalized(source).includes("france travail")) return [];
 
   const titleMatches = [...html.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)]
@@ -239,7 +239,12 @@ export function parseInlineCards(source, html, searchUrl, limit) {
       const snippet = stripHtml(html.slice(start, end));
       return { title, snippet };
     })
-    .filter(({ title, snippet }) => title.length > 8 && title.length < 140 && snippet.length >= 280)
+    .filter(({ title, snippet }) => 
+      title.length > 8 && 
+      title.length < 140 && 
+      snippet.length >= 280 &&
+      isJobTitleRelevant(title, targetKeywords)
+    )
     .slice(0, limit);
 
   return titleMatches.map(({ title, snippet }) => {
@@ -378,12 +383,12 @@ export async function searchApecSourceOnce(source, keywords, perSourceLimit) {
     }
     try {
       const job = await fetchApecOffer(numeroOffre, offer);
-      if (isImportable(job)) jobs.push(job);
+      if (isImportable(job, keywords)) jobs.push(job);
       else skippedCount += 1;
     } catch {
       const fallbackUrl = `https://www.apec.fr/candidat/recherche-emploi.html/emploi/detail-offre/${encodeURIComponent(numeroOffre)}`;
       const job = mapApecApiOffer(offer, null, fallbackUrl);
-      if (isImportable(job)) jobs.push(job);
+      if (isImportable(job, keywords)) jobs.push(job);
       else skippedCount += 1;
     }
   }
@@ -444,7 +449,7 @@ export async function searchPublicSourceOnceReliable(source, keywords, location,
     if (detail.ok) {
       const detailUrl = detail.finalUrl || detailLinks[i];
       const job = parseJobPage(source.name, detailUrl, detail.text);
-      if (isLikelyDetailUrlForSource(source.name, job.sourceUrl || detailUrl) && isImportable(job)) detailJobs.push(job);
+      if (isLikelyDetailUrlForSource(source.name, job.sourceUrl || detailUrl) && isImportable(job, keywords)) detailJobs.push(job);
       else {
         skippedCount += 1;
         poorQualityCount += 1;
@@ -454,10 +459,10 @@ export async function searchPublicSourceOnceReliable(source, keywords, location,
     }
   }
 
-  const inlineCandidates = detailLinks.length ? [] : parseInlineCards(source.name, searchPage.text, searchUrl, perSourceLimit);
+  const inlineCandidates = detailLinks.length ? [] : parseInlineCards(source.name, searchPage.text, searchUrl, perSourceLimit, keywords);
   const candidates = detailJobs.length ? detailJobs : inlineCandidates;
   const jobs = candidates.filter((job) => {
-    const keep = isImportable(job);
+    const keep = isImportable(job, keywords);
     if (!keep) {
       skippedCount += 1;
       poorQualityCount += 1;

@@ -325,6 +325,126 @@ const findContract = (normalizedText: string) => {
   return "Contrat non précisé";
 };
 
+export const findRemoteMode = (_rawText: string, normalizedText: string): JobAnalysis["remoteMode"] => {
+  if (hasAny(normalizedText, [
+    "100% teletravail", "full remote", "full-remote", "remote complet", "totalement a distance", "teletravail total", "100% remote"
+  ])) {
+    return "full_remote";
+  }
+  if (hasAny(normalizedText, [
+    "teletravail partiel", "teletravail possible", "teletravail flexible", "jours de teletravail", "j de teletravail", "j/semaine de teletravail",
+    "hybride", "mode hybride", "remote partiel", "charte teletravail", "accord teletravail", "teletravail 1", "teletravail 2", "teletravail 3"
+  ])) {
+    return "hybrid";
+  }
+  if (hasAny(normalizedText, [
+    "sur site", "presentiel strict", "deplacements quotidiens", "travail sur le terrain", "itinerant", "itinerance", "sur le terrain", "deplacements frequents"
+  ])) {
+    return "onsite";
+  }
+  return "non_precise";
+};
+
+export const findWorkSchedule = (_rawText: string, normalizedText: string): string => {
+  const parts: string[] = [];
+  if (hasAny(normalizedText, ["forfait jours", "forfait jour", "218 jours"])) parts.push("Forfait jours");
+  if (hasAny(normalizedText, ["rtt", "jours de rtt", "recuperation"])) parts.push("RTT");
+  if (hasAny(normalizedText, ["35h", "35 heures", "35h00"])) parts.push("35h");
+  else if (hasAny(normalizedText, ["39h", "39 heures", "39h00"])) parts.push("39h");
+  else if (hasAny(normalizedText, ["37h", "37.5h", "37h30"])) parts.push("37h30");
+
+  if (hasAny(normalizedText, ["2x8", "3x8", "5x8", "travail en equipe", "equipes successives"])) parts.push("Travail posté");
+  if (hasAny(normalizedText, ["travail de nuit", "horaires de nuit", "poste de nuit"])) parts.push("Nuit");
+  if (hasAny(normalizedText, ["travail le samedi", "travail le week-end", "travail le dimanche"])) parts.push("Week-end");
+  if (hasAny(normalizedText, ["astreinte", "astreintes"])) parts.push("Astreintes");
+  if (hasAny(normalizedText, ["temps partiel", "mi-temps"])) parts.push("Temps partiel");
+
+  return parts.length ? parts.join(" · ") : "Standard / Non précisé";
+};
+
+export const findEmploymentNature = (_rawText: string, company: string, normalizedText: string): JobAnalysis["employmentNature"] => {
+  if (hasAny(normalizedText, [
+    "franchise", "agent commercial", "mandataire", "independant", "auto-entrepreneur", "commission sur ca",
+    "apport d'affaires", "redevance", "creez votre cabinet", "creez votre agence", "portage salarial", "votre propre entreprise"
+  ])) {
+    return "independent_network";
+  }
+  if (hasAny(normalizedText, [
+    "agence d'interim", "mission d'interim", "contrat d'interim", "societe de conseil", "esn", "prestation de service", "cabinet de recrutement"
+  ]) || hasAny(normalize(company), ["adecco", "manpower", "randstad", "crit", "synergie", "proman", "temporis", "expectra", "hays", "page personnel", "michael page"])) {
+    return "interim_agency";
+  }
+  return "direct_salaried";
+};
+
+export const findOnboardingSupport = (_rawText: string, normalizedText: string): string[] => {
+  const supports: string[] = [];
+  if (hasAny(normalizedText, ["tutorat", "tuteur", "parrainage", "binome", "accompagne par un senior", "accompagnement terrain"])) {
+    supports.push("Tutorat & binôme d'intégration");
+  }
+  if (hasAny(normalizedText, ["formation interne", "formation assuree", "formation initiale", "ecole interne", "centre de formation", "nous vous formons"])) {
+    supports.push("Formation interne complète");
+  }
+  if (hasAny(normalizedText, ["poei", "poec", "afpr", "financement opco", "financement france travail", "financement pole emploi"])) {
+    supports.push("Dispositif POEI / Formation préalable");
+  }
+  if (hasAny(normalizedText, ["parcours certifiant", "certification prise en charge", "titre professionnel", "certifications offertes"])) {
+    supports.push("Certifications / Titre pro pris en charge");
+  }
+  if (hasAny(normalizedText, ["montee en competences", "plan de developpement", "formation continue", "evolution professionnelle"])) {
+    supports.push("Plan de montée en compétences");
+  }
+  return supports;
+};
+
+export const findUniversalKeySkills = (_rawText: string, normalizedText: string, _targetJob = ""): string[] => {
+  const skills = new Set<string>();
+
+  // Diagnostic / BTP / Énergie
+  if (hasAny(normalizedText, ["dpe"])) skills.add("DPE");
+  if (hasAny(normalizedText, ["amiante", "ss4"])) skills.add("Amiante / SS4");
+  if (hasAny(normalizedText, ["plomb", "crep"])) skills.add("Plomb (CREP)");
+  if (hasAny(normalizedText, ["termites", "parasitaire"])) skills.add("Termites");
+  if (hasAny(normalizedText, ["gaz"])) skills.add("Gaz");
+  if (hasAny(normalizedText, ["electricite", "élec"])) skills.add("Électricité");
+  if (hasAny(normalizedText, ["audit energetique", "auditeur energetique"])) skills.add("Audit énergétique");
+  if (hasAny(normalizedText, ["infiltrometrie", "permeabilite"])) skills.add("Infiltrométrie");
+  if (hasAny(normalizedText, ["liciel"])) skills.add("Liciel");
+  if (hasAny(normalizedText, ["winpass"])) skills.add("Winpass");
+  if (hasAny(normalizedText, ["autocad", "revit", "bim"])) skills.add("CAO / BIM");
+
+  // Tech / Web / IT
+  if (hasAny(normalizedText, ["react", "react.js", "reactjs"])) skills.add("React");
+  if (hasAny(normalizedText, ["typescript", "ts"])) skills.add("TypeScript");
+  if (hasAny(normalizedText, ["javascript", "js", "node", "nodejs"])) skills.add("Node.js / JS");
+  if (hasAny(normalizedText, ["python"])) skills.add("Python");
+  if (hasAny(normalizedText, ["java", "spring"])) skills.add("Java / Spring");
+  if (hasAny(normalizedText, ["php", "symfony", "laravel"])) skills.add("PHP / Symfony");
+  if (hasAny(normalizedText, ["docker", "kubernetes", "k8s"])) skills.add("Docker / K8s");
+  if (hasAny(normalizedText, ["aws", "azure", "gcp", "cloud"])) skills.add("Cloud (AWS/Azure/GCP)");
+  if (hasAny(normalizedText, ["sql", "postgresql", "mysql", "mongodb"])) skills.add("Bases de données SQL/NoSQL");
+  if (hasAny(normalizedText, ["git", "github", "gitlab"])) skills.add("Git / CI-CD");
+
+  // Gestion / Finance / RH / Admin
+  if (hasAny(normalizedText, ["excel", "tableur"])) skills.add("Excel avancé");
+  if (hasAny(normalizedText, ["sage", "cegid", "sap", "silae"])) skills.add("ERP / Logiciel de gestion");
+  if (hasAny(normalizedText, ["liasse fiscale", "bilan comptable", "tva", "cloture"])) skills.add("Comptabilité & Bilan");
+  if (hasAny(normalizedText, ["paie", "paye", "gestion de la paie"])) skills.add("Gestion de la paie");
+
+  // Transport / Logistique / Terrain
+  if (hasAny(normalizedText, ["permis b"])) skills.add("Permis B");
+  if (hasAny(normalizedText, ["permis c", "permis ec", "poids lourd"])) skills.add("Permis C / Poids Lourd");
+  if (hasAny(normalizedText, ["fimo", "fco"])) skills.add("FIMO / FCO");
+  if (hasAny(normalizedText, ["caces 1", "caces 3", "caces 5", "caces"])) skills.add("CACES");
+  if (hasAny(normalizedText, ["adr"])) skills.add("ADR (Matières dangereuses)");
+
+  // Commerce / Relation Client
+  if (hasAny(normalizedText, ["negociation", "prospection", "closing", "b2b"])) skills.add("Négociation & B2B");
+  if (hasAny(normalizedText, ["salesforce", "hubspot", "crm"])) skills.add("CRM (Salesforce/Hubspot)");
+
+  return Array.from(skills).slice(0, 8);
+};
+
 const findSalary = (rawText: string) => {
   const labelledSalary = cleanSalaryValue(firstMatch(rawText, [
     /^Salaire\s+(?:brut|net)\s*:\s*(.+)$/im,
@@ -1381,13 +1501,25 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
   const volumePressure = hasAny(text, ["rythme soutenu", "planning dense", "nombreuses interventions", "objectifs ambitieux", "secteur elargi", "forte autonomie"]);
   const hugeArea = hasAny(text, ["departements limitrophes", "region entiere", "secteur national", "grande mobilite", "déplacements fréquents"]);
 
-  addSignal(positiveSignals, beginnerFriendly && !employerTrainingEquivalent, "Débutant ou junior accepté");
+  const remoteMode = findRemoteMode(rawText, text);
+  const workSchedule = findWorkSchedule(rawText, text);
+  const employmentNature = findEmploymentNature(rawText, controlled.values.company || findCompany(rawText), text);
+  const onboardingSupport = findOnboardingSupport(rawText, text);
+  const keySkills = findUniversalKeySkills(rawText, text, strategy.targetJob);
+
+  addSignal(positiveSignals, beginnerFriendly && !employerTrainingEquivalent, strategy.experienceLevel === "debutant_reconversion" ? "Débutant ou reconversion accepté" : "Expérience compatible");
   addSignal(positiveSignals, employerTrainingEquivalent, "Formation facilitée par l'employeur");
   addSignal(positiveSignals, poei, "Formation facilitée avec dispositif POEI / POE / AFPR");
   addSignal(positiveSignals, employerTraining && !employerTrainingEquivalent, "Formation employeur détectée");
   addSignal(positiveSignals, training && !employerTraining && !poei && !fundedCerts, "Formation interne détectée");
   addSignal(positiveSignals, fundedCerts, "Formation ou certifications financées");
   addSignal(positiveSignals, cdi, "CDI détecté");
+  addSignal(positiveSignals, remoteMode === "full_remote", "100% Télétravail / Full Remote");
+  addSignal(positiveSignals, remoteMode === "hybrid", "Télétravail partiel / Mode hybride");
+  addSignal(positiveSignals, employmentNature === "direct_salaried" && cdi, "Salariat direct sécurisé");
+  if (onboardingSupport.length > 0) {
+    addSignal(positiveSignals, true, onboardingSupport[0]);
+  }
   addSignal(positiveSignals, salaryClear, "Salaire indiqué");
   addSignal(positiveSignals, salaryClear && salaryKind !== "non précisé", `Salaire ${salaryKind} précisé`);
   addSignal(positiveSignals, fullTime, "Temps plein détecté");
@@ -1397,7 +1529,7 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
   addSignal(positiveSignals, renovation, profile.id === DIAGNOSTIC_PROFILE_ID ? "Lien rénovation / conseil travaux" : "Perspective d'évolution détectée");
   addSignal(positiveSignals, copro, "Exposition copropriété / tertiaire");
 
-  addSignal(redFlags, independent, "Statut indépendant ou assimilé");
+  addSignal(redFlags, independent || employmentNature === "independent_network", "Statut indépendant ou réseau : salaire non garanti");
   addSignal(redFlags, variableDominant, "Rémunération trop dépendante du variable");
   addSignal(redFlags, payTraining, "Formation potentiellement à payer");
   addSignal(redFlags, volumePressure, "Rythme ou volume possiblement élevé");
@@ -1423,10 +1555,14 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
 
   let riskPenalty = 0;
 
-  let formationScore = 30;
-  let salaryScore = 35;
-  let trajectoryScore = 35;
-  let employerScore = 40;
+  const contextualSignals = profile.id === DIAGNOSTIC_PROFILE_ID || Boolean(
+    strategy.priorityTraining || strategy.priorityPoei || strategy.priorityAudit ||
+    strategy.auditRequirement !== "off" || strategy.poeiRequirement !== "off" || strategy.objective.trim(),
+  );
+  let formationScore = contextualSignals ? 30 : 50;
+  let salaryScore = 40;
+  let trajectoryScore = contextualSignals ? 35 : 50;
+  let employerScore = 45;
 
   const scoreLine = (axis: NonNullable<ScoreLine["axis"]>, label: string, value: number) => {
     scoreLines.push({ axis, label, value });
@@ -1496,14 +1632,14 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
   const finalTrajectory = clampScore(trajectoryScore);
   const finalEmployer = clampScore(employerScore);
   const weightedLocal = clampScore(
-    finalFormation * 0.25 +
-      finalSalary * 0.25 +
-      finalTrajectory * 0.2 +
-      finalEmployer * 0.15 +
-      riskScore * 0.15,
+    finalFormation * (contextualSignals ? 0.15 : 0.05) +
+      finalSalary * 0.3 +
+      finalTrajectory * (contextualSignals ? 0.2 : 0.15) +
+      finalEmployer * 0.2 +
+      riskScore * (contextualSignals ? 0.15 : 0.3),
   );
 
-  const radarAxes = strategy.radarAxes || ["Formation", "Salaire", "Trajectoire", "Employeur", "Risque"];
+  const radarAxes = strategy.radarAxes || ["Adéquation", "Salaire", "Contrat", "Évolution", "Risque"];
   const customAxesScores: Record<string, number> = {};
   const normalizedText = (originalRawText || "").toLowerCase();
 
@@ -1598,6 +1734,7 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
   const verdictReasons = [...redFlags.slice(0, 2), ...positiveSignals.slice(0, 3), ...uncertainties.slice(0, 2)].slice(0, 3);
 
   return {
+    analysisOrigin: job.aiReview?.status === "done" ? "ia" : "local",
     id: job.id,
     title,
     normalizedTitle,
@@ -1644,6 +1781,11 @@ export const analyzeJob = (job: JobRecord, strategy: Strategy): JobAnalysis => {
     confidenceReasons: confidence.reasons,
     rawText: originalRawText,
     customAxesScores,
+    remoteMode,
+    workSchedule,
+    employmentNature,
+    keySkills,
+    onboardingSupport,
   };
 };
 

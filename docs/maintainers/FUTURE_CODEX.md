@@ -28,7 +28,7 @@ L'utilisateur travaille en iteratif, en francais, et prefere qu'on pose beaucoup
 
 - `CHANGELOG.md` contient les changements recents en `Unreleased`.
 - `README.md` a ete aligne sur scoring IA-first, axes locaux et formation facilitee large.
-- `roadmap.md` date du 2026-06-03 et mentionne le scoring par axes.
+- `../ROADMAP.md` porte désormais la roadmap publique ; les notes historiques sont dans `../archive/ROADMAP-HISTORY.md`.
 
 ## Navigateur integre
 

@@ -2,7 +2,7 @@ export function json(res, status, payload) {
   res.writeHead(status, {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS,POST",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,x-ai-api-key,x-ai-provider,x-ai-base-url,x-gemini-api-key",
     "Content-Type": "application/json; charset=utf-8",
   });
   res.end(JSON.stringify(payload));

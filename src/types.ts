@@ -466,6 +466,7 @@ export type OfferType =
   | "A creuser";
 
 export type JobAnalysis = {
+  analysisOrigin: "local" | "ia";
   id: string;
   title: string;
   normalizedTitle: string;
@@ -512,6 +513,11 @@ export type JobAnalysis = {
   confidenceReasons: string[];
   rawText: string;
   customAxesScores?: Record<string, number>;
+  remoteMode?: "full_remote" | "hybrid" | "onsite" | "non_precise";
+  workSchedule?: string;
+  employmentNature?: "direct_salaried" | "interim_agency" | "independent_network";
+  keySkills?: string[];
+  onboardingSupport?: string[];
 };
 
 export type ValidationComparison = {

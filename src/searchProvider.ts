@@ -88,12 +88,12 @@ export const franceTravailProxyProvider: JobSearchProvider = {
 
     try {
       const params = new URLSearchParams({
-        keywords: strategy.targetJob || "diagnostiqueur immobilier",
+        keywords: strategy.targetJob || strategy.assistantIntent || "offres d'emploi",
         location: strategy.location || "",
         limit: "60",
         smartSearch: strategy.smartSearch === false ? "0" : "1",
         smartLocation: strategy.smartLocation === false ? "0" : "1",
-        experienceLevel: strategy.experienceLevel || "debutant_reconversion",
+        experienceLevel: strategy.experienceLevel || "indifferent",
         requiredPoei: strategy.poeiRequirement === "required" ? "1" : "0",
         requiredAudit: strategy.auditRequirement === "required" ? "1" : "0",
       });

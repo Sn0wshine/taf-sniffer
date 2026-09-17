@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SESSION_KEY, SOURCE_HEALTH_KEY } from "../appConstants";
+import type { AiAvailability } from "../appConstants";
 import { franceTravailProxyProvider, proxyBase } from "../searchProvider";
 import type { SearchQueryPlan } from "../searchQueries";
 import type {
@@ -49,6 +50,16 @@ export function useJobSearch() {
   const [networkDiagnostics, setNetworkDiagnostics] = useState<NetworkDiagnosticsResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [loadingAction, setLoadingAction] = useState("");
+  const [aiAvailability, setAiAvailability] = useState<AiAvailability>("unknown");
+
+  const classifyAiError = (message: string): AiAvailability => {
+    const text = message.toLowerCase();
+    if (text.includes("missing_gemini_api_key") || text.includes("clé gemini") || text.includes("gemini_api_key")) return "missing_key";
+    if (text.includes("quota") || text.includes("rate limit") || text.includes("429")) return "quota";
+    if (text.includes("401") || text.includes("403") || text.includes("api key") || text.includes("clé invalide")) return "invalid_key";
+    if (text.includes("proxy") || text.includes("network") || text.includes("fetch") || text.includes("failed to fetch")) return "proxy_unavailable";
+    return "unavailable";
+  };
 
   useEffect(() => {
     if (lastSearchSession) localStorage.setItem(SESSION_KEY, JSON.stringify(lastSearchSession));
@@ -68,7 +79,9 @@ export function useJobSearch() {
 
   const prepareAssistantSearchStrategy = async (
     currentStrategy: Strategy,
-    localGeminiKey = "",
+    apiKey = "",
+    aiProvider = "gemini",
+    aiBaseUrl = "",
   ): Promise<Strategy | null> => {
     if (!currentStrategy.targetJob.trim() && !currentStrategy.assistantIntent.trim()) {
       setStatusMessage("Indique au moins un métier ou une intention métier pour lancer la recherche.");
@@ -87,12 +100,15 @@ export function useJobSearch() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(localGeminiKey ? { "x-gemini-api-key": localGeminiKey } : {}),
+          ...(apiKey ? { "x-ai-api-key": apiKey } : {}),
+          "x-ai-provider": aiProvider,
+          ...(aiBaseUrl ? { "x-ai-base-url": aiBaseUrl } : {}),
         },
         body: JSON.stringify({ strategy: currentStrategy }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error?.message || "Plan IA indisponible.");
+      setAiAvailability("available");
       const plan = normalizeAiSearchPlan(payload);
       return {
         ...currentStrategy,
@@ -101,7 +117,8 @@ export function useJobSearch() {
         aiSearchPlanCheckedAt: new Date().toISOString(),
         radarAxes: plan.radarAxes?.length ? plan.radarAxes : currentStrategy.radarAxes,
       };
-    } catch {
+    } catch (error) {
+      setAiAvailability(classifyAiError(error instanceof Error ? error.message : "Plan IA indisponible."));
       return {
         ...currentStrategy,
         aiSearchQueries: [],
@@ -116,20 +133,24 @@ export function useJobSearch() {
     strategy,
     jobs,
     draft = "",
-    localGeminiKey = "",
+    apiKey = "",
+    aiProvider = "gemini",
+    aiBaseUrl = "",
     onImportRecords,
     onImportOffers,
   }: {
     strategy: Strategy;
     jobs: JobRecord[];
     draft?: string;
-    localGeminiKey?: string;
+    apiKey?: string;
+    aiProvider?: string;
+    aiBaseUrl?: string;
     onImportRecords: (records: JobRecord[], message: string, meta?: Partial<JobRecord>) => { importedCount: number; duplicateCount: number; rejectedCount: number; mergedJobs: JobRecord[] };
     onImportOffers: (text: string, meta?: Partial<JobRecord>) => { importedCount: number; duplicateCount: number; mergedJobs: JobRecord[] };
   }) => {
     startLoading("run-search");
     try {
-      const searchStrategy = await prepareAssistantSearchStrategy(strategy, localGeminiKey);
+      const searchStrategy = await prepareAssistantSearchStrategy(strategy, apiKey, aiProvider, aiBaseUrl);
       if (!searchStrategy) return null;
 
       const result = await franceTravailProxyProvider.search(searchStrategy, jobs, draft);
@@ -238,5 +259,6 @@ export function useJobSearch() {
     openSearches,
     resetSourceHealth,
     resetSearchState,
+    aiAvailability,
   };
 }

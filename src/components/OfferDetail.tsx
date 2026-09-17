@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Copy,
   ExternalLink,
@@ -886,6 +889,13 @@ export function OfferDetail({
   mode,
   showDebugInfo,
   companyEnrichment,
+  onNavigatePrevious,
+  onNavigateNext,
+  hasPrevious,
+  hasNext,
+  offerIndex,
+  totalOffers,
+  onBackToList,
 }: {
   job: JobRecord;
   analysis: JobAnalysis;
@@ -911,6 +921,13 @@ export function OfferDetail({
   mode: UiMode;
   showDebugInfo: boolean;
   companyEnrichment?: CompanyEnrichment;
+  onNavigatePrevious?: () => void;
+  onNavigateNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  offerIndex?: number;
+  totalOffers?: number;
+  onBackToList?: () => void;
 }) {
   const [editText, setEditText] = useState(job.rawText);
   const reviewStatus = normalizeReviewStatus(job);
@@ -1052,6 +1069,47 @@ export function OfferDetail({
 
   return (
     <>
+    {(onBackToList || onNavigatePrevious || onNavigateNext) && (
+      <div className="offer-detail-nav-bar">
+        {onBackToList ? (
+          <button type="button" className="ghost-button compact back-to-list-btn" onClick={onBackToList}>
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span>Retour à la liste</span>
+          </button>
+        ) : (
+          <div />
+        )}
+        <div className="offer-nav-pagination">
+          {typeof offerIndex === "number" && typeof totalOffers === "number" && (
+            <span className="offer-nav-count">
+              Offre <strong>#{offerIndex}</strong> / {totalOffers}
+            </span>
+          )}
+          <div className="offer-nav-buttons">
+            <button
+              type="button"
+              className="ghost-button compact nav-btn"
+              disabled={!hasPrevious}
+              onClick={onNavigatePrevious}
+              title="Offre précédente (K ou ↑)"
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+              <span>Précédente</span>
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact nav-btn"
+              disabled={!hasNext}
+              onClick={onNavigateNext}
+              title="Offre suivante (J ou ↓)"
+            >
+              <span>Suivante</span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <article className={`offer-detail ${mode === "assistant" ? "simple-detail" : ""}`}>
       <section className="offer-dashboard" aria-label="Synthèse de l'offre">
         <div className="offer-dashboard-main">
@@ -1064,6 +1122,41 @@ export function OfferDetail({
                 <span>{analysis.location}</span>
                 <span>{analysis.contract}</span>
               </p>
+              <div className="universal-tags-row">
+                {analysis.remoteMode && analysis.remoteMode !== "non_precise" && (
+                  <span className={`universal-tag remote-${analysis.remoteMode}`}>
+                    {analysis.remoteMode === "full_remote" && "🏠 100% Télétravail"}
+                    {analysis.remoteMode === "hybrid" && "🏠 Télétravail partiel"}
+                    {analysis.remoteMode === "onsite" && "🏢 Présentiel / Terrain"}
+                  </span>
+                )}
+                {analysis.workSchedule && analysis.workSchedule !== "Standard / Non précisé" && (
+                  <span className="universal-tag schedule">
+                    ⏱️ {analysis.workSchedule}
+                  </span>
+                )}
+                {analysis.employmentNature && (
+                  <span className={`universal-tag nature-${analysis.employmentNature}`}>
+                    {analysis.employmentNature === "direct_salaried" && "🛡️ Salariat direct"}
+                    {analysis.employmentNature === "interim_agency" && "👥 Agence / Prestation"}
+                    {analysis.employmentNature === "independent_network" && "⚠️ Statut indépendant"}
+                  </span>
+                )}
+                {analysis.experienceFit === "reconversion_ok" && (
+                  <span className="universal-tag reconversion">
+                    🎓 Reconversion & Débutant bienvenu
+                  </span>
+                )}
+              </div>
+              {analysis.onboardingSupport && analysis.onboardingSupport.length > 0 && (
+                <div className="onboarding-support-row">
+                  {analysis.onboardingSupport.map((support) => (
+                    <span key={support} className="onboarding-support-chip">
+                      ✓ {support}
+                    </span>
+                  ))}
+                </div>
+              )}
               {analysis.normalizedSalary?.monthlyNetMin && analysis.normalizedSalary.confidence === "bonne" ? (
                 <p className="offer-hero-salary">
                   <strong>{analysis.normalizedSalary.fixedLabel || analysis.normalizedSalary.label}</strong>
