@@ -4,8 +4,7 @@ Date : 2026-06-03
 
 ## Contexte rapide
 
-Le projet est `Taf Sniffer`, dans `G:\Logiciel\Taf sniffer`. Version actuelle : `0.820`.
-L'utilisateur travaille en iteratif, en francais, et prefere qu'on pose beaucoup de questions en mode plan, mais en mode execution il attend qu'on avance concretement.
+Le projet est `Taf Sniffer`. Ces notes historiques décrivent la version `0.820` ; consulter `AGENTS.md` et la documentation actuelle pour travailler sur le dépôt.
 
 ## Etat produit recent
 
@@ -30,20 +29,9 @@ L'utilisateur travaille en iteratif, en francais, et prefere qu'on pose beaucoup
 - `README.md` a ete aligne sur scoring IA-first, axes locaux et formation facilitee large.
 - `../ROADMAP.md` porte désormais la roadmap publique ; les notes historiques sont dans `../archive/ROADMAP-HISTORY.md`.
 
-## Navigateur integre
+## Pistes historiques d’amélioration de l’interface
 
-Le plugin Browser a ete demande via `[@Navigateur]`, mais la connexion a echoue deux fois avec :
-
-```text
-privileged native pipe bridge is not available; browser-client is not trusted
-```
-
-Si l'utilisateur a reset le cache Codex ou reautorise le navigateur, retenter avec le skill Browser avant tout fallback.
-
-## Prochaine demande probable
-
-L'utilisateur voulait faire une passe pour rendre l'affichage des resultats plus joli, en commencant par un audit visuel.
-Audit preliminaire deja donne :
+Constats préliminaires :
 
 1. Le detail d'offre a trop de cartes imbriquees.
 2. Le score hero + les 5 metriques prennent trop de place.

@@ -1,6 +1,8 @@
 # Audit projet Taf Sniffer — 24/08/2026
 
-Audit statique du dépôt `g:\Logiciel\AI - Taf sniffer` (v0.821) : architecture, sécurité, qualité de code, tests, hygiène Git et plan d'action priorisé.
+Audit statique du dépôt Taf Sniffer (v0.821) : architecture, sécurité, qualité de code, tests, hygiène Git et plan d'action priorisé.
+
+> Archive historique : le mécanisme d’intégration de clés au build décrit ci-dessous a depuis été supprimé. Aucune clé, même de debug, ne doit être embarquée côté client. Cela ne révoque pas les clés contenues dans d’anciens artefacts.
 
 ---
 
@@ -47,7 +49,7 @@ Architecture frontend bien refactorée : `App.tsx` ne fait plus que 392 lignes, 
 - Le `dist/` actuel est propre uniquement parce que le refactoring a retiré l'import d'`embeddedDebugGeminiKey` (tree-shaking). **Il suffit d'un futur import pour re-fuir la clé** dans la PWA et l'APK suivants.
 
 **Actions**
-1. Supprimer le fallback `env.GEMINI_API_KEY` dans `vite.config.ts` (ne garder que `VITE_DEBUG_GEMINI_KEY`, explicitement destiné au client).
+1. Supprimer toute intégration de clé au build client, y compris `GEMINI_API_KEY` et `VITE_DEBUG_GEMINI_KEY`.
 2. Considérer la clé actuelle comme compromise → **la révoquer/rotater** dans Google AI Studio.
 3. Rebuild + `npx cap sync android` avant toute redistribution d'APK.
 

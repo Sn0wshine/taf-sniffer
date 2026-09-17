@@ -1,4 +1,3 @@
-declare const __TAF_SNIFFER_DEBUG_GEMINI_KEY__: string;
 declare const __TAF_SNIFFER_ANDROID_PROXY_BASE__: string;
 
 declare global {
@@ -9,8 +8,6 @@ declare global {
     };
   }
 }
-
-export const embeddedDebugGeminiKey = __TAF_SNIFFER_DEBUG_GEMINI_KEY__ || "";
 
 export const androidProxyBase = (__TAF_SNIFFER_ANDROID_PROXY_BASE__ || "").replace(/\/+$/, "");
 
