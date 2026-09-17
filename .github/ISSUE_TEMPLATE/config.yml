@@ -1,0 +1,7 @@
+contact_links:
+  - name: Question ou discussion
+    url: https://github.com/Sn0wshine/taf-sniffer/discussions
+    about: Pour les questions d'usage, les idées informelles et les retours d'expérience.
+  - name: Vulnérabilité de sécurité
+    url: https://github.com/Sn0wshine/taf-sniffer/security/advisories/new
+    about: Merci de ne pas signaler une vulnérabilité dans une issue publique (voir SECURITY.md).
