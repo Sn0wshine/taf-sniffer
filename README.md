@@ -1,13 +1,21 @@
 # Taf Sniffer
 
-> Trouver, comparer et comprendre les offres d’emploi qui correspondent à ton profil.
+> Rassemble les offres de plusieurs sources, compare leurs conditions et choisis où candidater.
 
 [![CI](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml/badge.svg)](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Taf Sniffer est une application open source de recherche d’emploi qui aide chaque personne à passer d’une intention à une décision claire : chercher un métier, comparer des offres et comprendre leurs points forts comme leurs risques.
+Taf Sniffer est un agrégateur open source d’offres d’emploi en français. Il rassemble dans une même liste les annonces collectées sur plusieurs sources et les imports manuels, puis aide à les comparer selon ton métier, ta zone et tes priorités. La provenance reste visible pour retrouver la source et vérifier les informations avant de candidater.
 
-L’application fonctionne en **mode local sans clé API** : import manuel, extraction déterministe, filtres, classement explicable et sauvegarde locale. Un fournisseur IA peut enrichir la recherche et l’analyse lorsqu’une clé API est configurée.
+**L’analyse locale fonctionne sans clé API.** Importe une annonce, extrais ses informations, ajuste les filtres et conserve les offres utiles. L’IA est facultative : elle peut enrichir la recherche et l’analyse lorsqu’un fournisseur est configuré.
+
+## Ce que tu peux faire
+
+- **Chercher selon tes critères** : métier, mots-clés, zone et conditions recherchées.
+- **Comparer et comprendre** : classement explicable, informations extraites modifiables et signaux de vigilance.
+- **Mettre les salaires en perspective** : repères calculés à partir des offres déjà analysées, et non d’un baromètre exhaustif du marché.
+- **Continuer sans collecte automatique** : import manuel lorsqu’une source externe est indisponible.
+- **Garder une base locale** : extraction, classement et sauvegarde sans clé API. La recherche sur les sources externes et les fournisseurs IA nécessitent une connexion.
 
 ## Démarrage rapide
 

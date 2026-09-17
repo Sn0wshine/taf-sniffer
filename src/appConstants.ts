@@ -116,8 +116,8 @@ export const aiModeDescriptions: Record<AIMode, string> = {
 };
 
 export const appViewLabels: Record<AppView, string> = {
-  assistant: "Recherche guidée",
-  results: "Résultats",
+  assistant: "Rechercher",
+  results: "Mes offres",
   comparison: "Comparaison",
   expert: "Outils avancés",
 };

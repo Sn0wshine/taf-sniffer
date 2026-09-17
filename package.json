@@ -1,6 +1,6 @@
 {
   "name": "taf-sniffer",
-  "description": "Taf Sniffer aide à trouver, comparer et comprendre les offres d'emploi qui correspondent à chaque profil.",
+  "description": "Agrégateur open source d’offres d’emploi : rassemble plusieurs sources dans une seule liste, compare les conditions et retrouve la provenance. Analyse locale sans clé API, IA facultative.",
   "private": false,
   "version": "0.1.0",
   "license": "MIT",

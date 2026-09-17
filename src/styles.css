@@ -61,9 +61,7 @@
 }
 
 body {
-  background:
-    radial-gradient(circle at top left, rgba(6, 117, 111, 0.08), transparent 32rem),
-    linear-gradient(180deg, #f8fafb 0%, #eef3f5 100%);
+  background: var(--surface-soft);
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
@@ -117,8 +115,24 @@ button {
   color: var(--ink);
 }
 
-.brand .logo-sparkle {
+.brand-home {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  padding: var(--space-1) 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.brand-home svg {
   color: var(--teal);
+}
+
+.brand-home:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 4px;
 }
 
 .app-view-tabs {
@@ -10180,14 +10194,12 @@ body.is-resizing {
 .dashboard-hero p:not(.eyebrow) { max-width: 680px; margin: 0; color: var(--muted, #667085); }
 .dashboard-hero .primary-button { flex: 0 0 auto; }
 
-.dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.dashboard-metrics button { border: 1px solid var(--border, rgba(120, 130, 150, .22)); border-radius: 16px; padding: 17px; text-align: left; background: var(--surface, rgba(255, 255, 255, .72)); color: inherit; cursor: pointer; }
-.dashboard-metrics button:hover, .dashboard-metrics button:focus-visible { border-color: var(--accent, #6d5dfc); transform: translateY(-1px); }
-.dashboard-metrics strong, .dashboard-metrics span { display: block; }
-.dashboard-metrics strong { font-size: 1.65rem; }
-.dashboard-metrics span { margin-top: 4px; color: var(--muted, #667085); font-size: .88rem; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; border-block: 1px solid var(--line); }
+.dashboard-metrics > div { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); }
+.dashboard-metrics dt { color: var(--muted); font-size: .88rem; }
+.dashboard-metrics dd { order: -1; margin: 0; font-size: 1.65rem; font-weight: 700; }
 
-.dashboard-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dashboard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .dashboard-action-card { padding: 20px; text-align: left; color: inherit; cursor: pointer; }
 .dashboard-action-card:hover, .dashboard-action-card:focus-visible { border-color: var(--accent, #6d5dfc); }
 .dashboard-action-card strong, .dashboard-action-card span { display: block; }

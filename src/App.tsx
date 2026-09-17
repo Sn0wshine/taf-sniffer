@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Check, RotateCcw, Settings2, Sparkles, Trash2 } from "lucide-react";
+import { Check, Layers, RotateCcw, Settings2, Sparkles, Trash2 } from "lucide-react";
 import { APP_VERSION_LABEL } from "./appVersion";
 import {
   DEFAULT_AI_MODE,
@@ -299,10 +299,13 @@ export function App() {
   return (
     <div className={`app-shell view-${activeView}`}>
       <header className="app-header">
-        <div className="brand" onClick={() => setAppView("assistant")}>
-          <Sparkles className="logo-sparkle" size={24} aria-hidden="true" />
+        <div className="brand">
           <h1>
-            Taf Sniffer <span className="version-chip">{APP_VERSION_LABEL}</span>
+            <button className="brand-home" type="button" onClick={() => { setAssistantRuntime("idle"); setAppView("assistant"); }} aria-label="Taf Sniffer — accueil">
+              <Layers size={24} aria-hidden="true" />
+              Taf Sniffer
+            </button>
+            <span className="version-chip">{APP_VERSION_LABEL}</span>
           </h1>
         </div>
 
@@ -313,6 +316,7 @@ export function App() {
               className={activeView === view ? "active" : ""}
               type="button"
               onClick={() => setAppView(view)}
+              aria-current={activeView === view ? "page" : undefined}
               title={appViewDescriptions[view]}
             >
               {appViewLabels[view]}

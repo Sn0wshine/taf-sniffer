@@ -42,8 +42,8 @@ export function SimpleIntro() {
     <section className="simple-intro">
       <div>
         <p className="eyebrow">Recherche guidée</p>
-        <h2>Décris le poste que tu cherches, puis lance la recherche.</h2>
-        <p>La recherche et le classement local fonctionnent sans clé API. Un fournisseur IA peut ensuite enrichir les requêtes et l'analyse si tu le souhaites.</p>
+        <h2>Rassemble les offres qui correspondent à ta recherche.</h2>
+        <p>Précise un métier et une zone pour interroger les sources disponibles. Tu pourras compléter la liste par import manuel et comparer les offres sans clé API.</p>
       </div>
     </section>
   );
@@ -291,8 +291,8 @@ export function SimpleSearchPanel({
       <section className={assistantStageClass}>
         <div className="assistant-stage-content assistant-launch-card">
           <p className="eyebrow">Recherche guidée</p>
-          <h2>Prêt à flairer les bonnes offres ?</h2>
-          <p>Un bouton, puis l'assistant te pose les questions utiles. Les anciennes offres restent disponibles à droite.</p>
+          <h2>Recherche sur plusieurs sources</h2>
+          <p>Précise le poste, la zone et les conditions recherchées. Les offres déjà collectées restent dans Mes offres.</p>
           <div className="assistant-launch-actions">
             <button className="primary-button one-button" type="button" onClick={onStartAssistant}>
               Lancer l'assistant

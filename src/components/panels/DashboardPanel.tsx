@@ -24,31 +24,27 @@ export function DashboardPanel({
     <section className="dashboard-view" aria-labelledby="dashboard-title">
       <div className="dashboard-hero">
         <div>
-          <p className="eyebrow">Tableau de bord</p>
-          <h2 id="dashboard-title">Ta prochaine opportunité commence ici.</h2>
-          <p>Recherche un métier, compare les offres et décide avec des critères lisibles. L'analyse locale fonctionne sans clé API ; l'IA ajoute un éclairage quand elle est disponible.</p>
+          <p className="eyebrow">Agrégateur d’offres d’emploi</p>
+          <h2 id="dashboard-title">Plusieurs sources, une seule liste d’offres.</h2>
+          <p>Rassemble les annonces collectées et tes imports, compare leurs conditions et garde celles qui t’intéressent. La collecte dépend de la disponibilité des sources ; l’import manuel reste possible.</p>
         </div>
         <button className="primary-button" type="button" onClick={onStartSearch}>Lancer une recherche guidée</button>
       </div>
 
-      <div className="dashboard-metrics" aria-label="Résumé des offres">
-        <button type="button" onClick={onShowResults}><strong>{offerCount}</strong><span>offres collectées</span></button>
-        <button type="button" onClick={onShowResults}><strong>{reviewCount}</strong><span>à traiter</span></button>
-        <button type="button" onClick={onShowResults}><strong>{exploreCount}</strong><span>à creuser</span></button>
-        <button type="button" onClick={onShowResults}><strong>{priorityCount}</strong><span>priorités</span></button>
-      </div>
+      <dl className="dashboard-metrics" aria-label="Résumé des offres">
+        <div><dt>offres rassemblées</dt><dd>{offerCount}</dd></div>
+        <div><dt>à traiter</dt><dd>{reviewCount}</dd></div>
+        <div><dt>à creuser</dt><dd>{exploreCount}</dd></div>
+        <div><dt>priorités</dt><dd>{priorityCount}</dd></div>
+      </dl>
 
       <div className="dashboard-actions">
-        <button className="dashboard-action-card" type="button" onClick={onStartSearch}>
-          <strong>Rechercher des offres</strong>
-          <span>Métier, zone et conditions essentielles.</span>
-        </button>
         <button className="dashboard-action-card" type="button" onClick={onShowTools}>
           <strong>Importer une annonce</strong>
-          <span>Analyse locale immédiate, sans API.</span>
+          <span>Analyse locale, sans clé API.</span>
         </button>
         <button className="dashboard-action-card" type="button" onClick={onShowResults}>
-          <strong>Voir mes résultats</strong>
+          <strong>Voir mes offres</strong>
           <span>{hasOffers ? "Reprendre le tri et les favoris." : "Tes offres apparaîtront ici."}</span>
         </button>
       </div>

@@ -259,7 +259,7 @@ export function ResultsView({
   return (
     <div className="results-view-container">
       <div className="results-toolbar">
-        <div className="ranking-filter-pills" role="tablist" aria-label="Filtrer les annonces">
+        <div className="ranking-filter-pills" role="group" aria-label="Filtrer les annonces">
           <HelpTooltip tooltip="Afficher les offres à traiter (nouvelles et non encore triées).">
             <button
               className={`filter-pill ${filter === "to_review" ? "active" : ""}`}
@@ -289,7 +289,7 @@ export function ResultsView({
               className={`filter-pill ${filter === "formation" ? "active" : ""}`}
               onClick={() => onFilterChange("formation")}
             >
-              🎓 Formation <span className="filter-count">{formationCount}</span>
+              Formation <span className="filter-count">{formationCount}</span>
             </button>
           </HelpTooltip>
           <HelpTooltip tooltip="Afficher les offres ignorées (restaurables).">
@@ -311,8 +311,8 @@ export function ResultsView({
         </div>
 
         {marketStats && (
-          <div className="market-banner" aria-label="Statistiques de salaire du marché">
-            💰 Marché observé · <strong>{strategy.targetJob || "tous métiers"}</strong>
+          <div className="market-banner" aria-label="Repères salariaux des offres analysées, non représentatifs de tout le marché">
+            Salaires des offres analysées · <strong>{strategy.targetJob || "tous métiers"}</strong>
             {strategy.location ? (
               <>
                 {" @ "}
@@ -330,7 +330,8 @@ export function ResultsView({
           <input
             type="search"
             className="ranking-search-input"
-            placeholder="Rechercher par métier, ville, entreprise..."
+            aria-label="Rechercher dans les offres collectées"
+            placeholder="Métier, ville, entreprise…"
             value={rankingSearch}
             onChange={(e) => onRankingSearchChange(e.target.value)}
           />
@@ -464,12 +465,12 @@ export function ResultsView({
                         {aiRankScore !== null && <span className="ai-rank-chip">score IA</span>}
                         {job.extractionQuality === "complète" && <span className="import-quality-ok">fiable</span>}
                         {extractionReviewValue(job) === "needs_review" && <span className="import-quality-review">à vérifier</span>}
-                        <span>{job.source || datasetDisplayLabel(job.datasetLabel)}</span>
-                        {job.alsoFoundOn && job.alsoFoundOn.length > 0 && (
-                          <span className="multisource-chip" title={`Aussi sur : ${job.alsoFoundOn.join(", ")}`}>
-                            +{job.alsoFoundOn.length}
-                          </span>
-                        )}
+                        <span className="offer-provenance">
+                          Source : {job.source || datasetDisplayLabel(job.datasetLabel)}
+                          {job.alsoFoundOn && job.alsoFoundOn.length > 0 && (
+                            <span> · Aussi sur : {job.alsoFoundOn.join(", ")}</span>
+                          )}
+                        </span>
                         {showDebugInfo && job.extractionQuality && <span>{extractionLabel(job.extractionQuality)}</span>}
                       </span>
                     </span>

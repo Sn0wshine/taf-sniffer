@@ -1,6 +1,8 @@
 # Produit
 
-Taf Sniffer est un outil de tri et de décision pour la recherche d’emploi, pas un job board supplémentaire.
+Taf Sniffer est un agrégateur open source d’offres d’emploi en français. Il réunit les annonces de plusieurs sources et les imports manuels dans une liste commune, avec leur provenance. Sa valeur : éviter de comparer des annonces dispersées entre plusieurs sites, puis les classer selon les critères de l’utilisateur. La collecte est non exhaustive et dépend de la disponibilité des sources.
+
+L’import manuel, l’extraction et le classement local fonctionnent sans clé API. L’IA peut enrichir l’analyse, mais reste facultative. Les repères salariaux sont issus des offres déjà analysées ; ils ne représentent pas l’ensemble du marché.
 
 ## Principes
 
