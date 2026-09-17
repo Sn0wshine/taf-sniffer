@@ -206,7 +206,7 @@ const aiDecisionTooltip = (verdict?: AIReview["decisionVerdict"]) => {
 };
 
 const aiScoreTooltip =
-  "Score IA : Gemini classe l'offre selon ton intention, les critères et les garde-fous. Il complète le score local, mais ne remplace pas les filtres stricts comme formation facilitée obligatoire, audit ou indépendant.";
+  "Score IA : le fournisseur IA classe l'offre selon ton intention, les critères et les garde-fous. Il complète le score local, mais ne remplace pas les filtres stricts comme formation facilitée obligatoire, audit ou indépendant.";
 
 const salaryAiTooltip =
   "Salaire IA : compare le fixe avant les primes, puis le package si les primes sont estimables. Brut/net, variable, 13e mois, avantages et temps de travail changent beaucoup la lecture cashflow.";
@@ -338,7 +338,7 @@ function QuickDecisionCard({
           <h3>{summary.verdict}</h3>
         </div>
         <div className="quick-decision-chips">
-          <InfoChip className={`field-source-chip ${summary.source === "ia" ? "ai" : "local"}`} tooltip={summary.source === "ia" ? "Résumé basé sur l'avis Gemini déjà généré." : "Résumé local calculé avec les règles Taf Sniffer."}>
+          <InfoChip className={`field-source-chip ${summary.source === "ia" ? "ai" : "local"}`} tooltip={summary.source === "ia" ? "Résumé basé sur l'avis IA déjà généré." : "Résumé local calculé avec les règles Taf Sniffer."}>
             {sourceLabel}
           </InfoChip>
           {needsVerification && (
@@ -448,7 +448,7 @@ function AIReviewCard({
       <div className="section-title">
         <h3>
           Avis IA clair
-          <InlineHelp tooltip="Avis IA : synthèse métier générée par Gemini à partir de l'annonce et de tes critères. Elle aide à décider, mais les corrections manuelles et les garde-fous restent prioritaires." />
+          <InlineHelp tooltip="Avis IA : synthèse métier générée à partir de l'annonce et de tes critères. Elle aide à décider, mais les corrections manuelles et les garde-fous restent prioritaires." />
         </h3>
         <span className={adjustment >= 0 ? "positive-text" : "negative-text"}>
           {adjustment >= 0 ? "+" : ""}{adjustment} pts IA
@@ -1235,7 +1235,7 @@ export function OfferDetail({
             <span>{scoreLabel}</span>
             <InfoChip
               className={`${scoreClass(scoreValue)} ${aiRankScore !== null ? "ai-rank-score" : ""}`}
-              tooltip={aiRankScore !== null ? "Score de classement Gemini utilisé en mode IA." : "Score final de l'offre : règles locales, corrections et éventuel ajustement IA borné."}
+              tooltip={aiRankScore !== null ? "Score de classement IA utilisé en mode enrichi." : "Score final de l'offre : règles locales, corrections et éventuel ajustement IA borné."}
             >
               {scoreValue}
             </InfoChip>

@@ -452,7 +452,7 @@ export function App() {
 
       {aiAvailability === "missing_key" && uiState.aiMode !== "local" && !aiFallbackMessage && (
         <div className="local-mode-banner" role="status">
-          Mode local actif : ajoute une clé Gemini dans Options seulement si tu veux l'analyse enrichie.
+          Mode local actif : ajoute une clé API dans Options seulement si tu veux l'analyse enrichie.
         </div>
       )}
 

@@ -134,7 +134,7 @@ export const buildLocalGeminiSearchPlan = async (strategy: Strategy, apiKey: str
       queries: boundedList(raw.queries, 8),
       reasons: boundedList(raw.reasons, 4),
       radarAxes: boundedList(raw.radarAxes, 6).filter((axis) => axis.length >= 2),
-      message: "Plan IA généré avec la clé Gemini locale.",
+      message: "Plan IA généré avec la clé API locale.",
     };
   });
 
@@ -195,7 +195,7 @@ export const analyzeJobsWithLocalGemini = async (input: LocalGeminiAnalyzeInput)
       configured: true,
       provider: "Gemini",
       model,
-      message: "Analyse IA générée avec la clé Gemini locale.",
+      message: "Analyse IA générée avec la clé API locale.",
       reviews: reviews.map((review): AIReview & { id?: string } => {
         const item = asObject(review);
         const id = typeof item.id === "string" ? item.id : "";

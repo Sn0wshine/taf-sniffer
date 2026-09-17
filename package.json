@@ -1,5 +1,6 @@
 {
   "name": "taf-sniffer",
+  "description": "Taf Sniffer aide à trouver, comparer et comprendre les offres d'emploi qui correspondent à chaque profil.",
   "private": false,
   "version": "0.1.0",
   "license": "MIT",

@@ -76,7 +76,7 @@ const androidNoProxyResult = (localResult: SearchProviderResult, existingJobs: J
     ...localResult,
     status: "needsConnector",
     networkStatus: "blocked",
-    message: "Mode Android : Gemini peut préparer et analyser, mais l'import automatique d'offres demande un proxy distant. Colle une annonce dans Analyse express ou configure VITE_ANDROID_PROXY_BASE.",
+    message: "Mode Android : le fournisseur IA peut préparer et analyser, mais l'import automatique d'offres demande un proxy distant. Colle une annonce dans Analyse express ou configure VITE_ANDROID_PROXY_BASE.",
   };
 };
 

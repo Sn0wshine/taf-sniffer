@@ -1,7 +1,7 @@
 {
   "name": "Taf Sniffer",
   "short_name": "Taf Sniffer",
-  "description": "Analyse et classe les offres d'emploi selon ton plan de reconversion.",
+  "description": "Trouve, compare et comprends les offres d'emploi qui correspondent à ton profil. Analyse locale sans clé API, enrichissement IA facultatif.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

@@ -435,7 +435,7 @@ export function ResultsView({
                     <span className="rank-index">#{index + 1}</span>
                     <InfoChip
                       className={`rank-score ${scoreClass(aiRankScore ?? analysis.scores.global)} ${aiRankScore !== null ? "ai-rank-score" : ""}`}
-                      tooltip={aiRankScore !== null ? "Score IA : Gemini classe cette offre." : "Score local : estimation Taf Sniffer."}
+                      tooltip={aiRankScore !== null ? "Score IA : le fournisseur IA classe cette offre." : "Score local : estimation Taf Sniffer."}
                     >
                       <ScoreArc score={aiRankScore ?? analysis.scores.global} />
                     </InfoChip>

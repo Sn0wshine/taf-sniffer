@@ -110,13 +110,13 @@ export const aiModeLabels: Record<AIMode, string> = {
 };
 
 export const aiModeDescriptions: Record<AIMode, string> = {
-  ai_top10: "Gemini retrie les 10 meilleures offres présélectionnées localement.",
-  ai_full: "Gemini analyse toutes les offres par lots de 25, avec le score local en garde-fou.",
+  ai_top10: "Le fournisseur IA enrichit les 10 meilleures offres présélectionnées localement.",
+  ai_full: "Le fournisseur IA analyse toutes les offres par lots de 25, avec le score local en garde-fou.",
   local: "Aucun appel IA automatique : recherche et classement locaux complets.",
 };
 
 export const appViewLabels: Record<AppView, string> = {
-  assistant: "Assistant",
+  assistant: "Recherche guidée",
   results: "Résultats",
   comparison: "Comparaison",
   expert: "Outils avancés",

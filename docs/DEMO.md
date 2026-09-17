@@ -2,12 +2,12 @@
 
 ## Parcours à enregistrer
 
-La démo cible 30 à 45 secondes et doit utiliser uniquement les données d'exemple intégrées à l'application :
+La démo cible 30 à 45 secondes et montre comment Taf Sniffer aide à trouver, comparer et comprendre des offres, avec ou sans clé API. Elle doit utiliser uniquement les données d'exemple intégrées à l'application :
 
-1. Ouvrir l'écran de recherche et afficher l'objectif de reconversion.
+1. Ouvrir le tableau de bord et lancer une recherche guidée pour un métier ou des mots-clés.
 2. Lancer une recherche ou charger les exemples locaux.
-3. Montrer le Top 3 et les axes explicables du classement.
-4. Ouvrir le détail d'une offre et afficher les signaux formation, salaire et trajectoire.
+3. Montrer les offres classées, le mode local et les critères explicables du classement.
+4. Ouvrir le détail d'une offre et afficher les signaux pertinents : métier, salaire, contrat, localisation et qualité de l'annonce.
 5. Coller une annonce dans Import rapide et montrer l'analyse locale sans clé API.
 
 ## Règles de publication

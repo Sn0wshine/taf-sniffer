@@ -1,9 +1,11 @@
 # Taf Sniffer
 
+> Trouver, comparer et comprendre les offres d’emploi qui correspondent à ton profil.
+
 [![CI](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml/badge.svg)](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Taf Sniffer est une application open source de recherche d’emploi. Elle aide à trouver, importer, comparer et comprendre des offres selon un métier, une zone et des critères choisis par l’utilisateur.
+Taf Sniffer est une application open source de recherche d’emploi qui aide chaque personne à passer d’une intention à une décision claire : chercher un métier, comparer des offres et comprendre leurs points forts comme leurs risques.
 
 L’application fonctionne en **mode local sans clé API** : import manuel, extraction déterministe, filtres, classement explicable et sauvegarde locale. Un fournisseur IA peut enrichir la recherche et l’analyse lorsqu’une clé API est configurée.
 
@@ -33,7 +35,7 @@ npm run build
 4. Importer manuellement une annonce si une source externe est bloquée.
 5. Corriger les informations extraites et conserver les offres intéressantes.
 
-La clé API est facultative. Elle est configurée dans **Options** avec le fournisseur et, si nécessaire, l’URL d’un endpoint compatible OpenAI. Gemini reste le fournisseur serveur actuellement intégré ; l’interface prépare l’ajout d’autres adaptateurs sans imposer Gemini au produit. Sans clé, les fonctions essentielles restent disponibles.
+La clé API est facultative. Elle est configurée dans **Options** avec le fournisseur et, si nécessaire, l’URL d’un endpoint compatible. L’IA peut enrichir les requêtes et l’analyse, mais aucune fonctionnalité essentielle ne dépend d’un fournisseur particulier : sans clé, la recherche, l’import et le classement local restent disponibles.
 
 ## Sources et limites
 

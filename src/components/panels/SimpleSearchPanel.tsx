@@ -43,7 +43,7 @@ export function SimpleIntro() {
       <div>
         <p className="eyebrow">Recherche guidée</p>
         <h2>Décris le poste que tu cherches, puis lance la recherche.</h2>
-        <p>La recherche et le classement local fonctionnent sans clé API. Gemini peut ensuite enrichir les requêtes et l'analyse si tu le souhaites.</p>
+        <p>La recherche et le classement local fonctionnent sans clé API. Un fournisseur IA peut ensuite enrichir les requêtes et l'analyse si tu le souhaites.</p>
       </div>
     </section>
   );
@@ -160,8 +160,8 @@ export function SimpleSearchPanel({
   const aiButtonTitle = !searchReady
     ? "Lance d'abord une recherche pour constituer une sélection d'offres."
     : top3AiCount === 0
-      ? "Aucune offre exploitable à analyser avec Gemini."
-      : `Analyse ${top3AiCount} offre${top3AiCount > 1 ? "s" : ""} avec Gemini.`;
+      ? "Aucune offre exploitable à analyser avec l'IA."
+      : `Analyse ${top3AiCount} offre${top3AiCount > 1 ? "s" : ""} avec l'IA.`;
   const activeProfile = getActiveProfile(strategy);
   const jobDictionaryMatches = mergeDictionarySuggestions(
     "job",
@@ -206,7 +206,7 @@ export function SimpleSearchPanel({
     { key: "zone" as const, label: "Zone", tooltip: "Zone : précise le territoire voulu, ou laisse vide pour chercher large en France entière." },
     { key: "conditions" as const, label: "Conditions", tooltip: "Conditions : salaire, expérience et contrat servent surtout à classer les offres, pas à tout bloquer." },
     { key: "constraints" as const, label: "Contraintes", tooltip: "Contraintes : garde-fous comme formation facilitée, audit ou indépendant imposé. Obligatoire devient un filtre fort." },
-    { key: "summary" as const, label: "Résumé", tooltip: "Résumé : synthèse éditable envoyée à Gemini comme contexte de recherche et de classement." },
+    { key: "summary" as const, label: "Résumé", tooltip: "Résumé : synthèse éditable envoyée au fournisseur IA comme contexte de recherche et de classement." },
   ];
   const assistantStep = assistantSteps[activeStepIndex].key;
   const canSearch = Boolean((strategy.targetJob || "").trim() || (strategy.assistantIntent || "").trim());
@@ -390,7 +390,7 @@ export function SimpleSearchPanel({
         key: "ai-plan",
         icon: "✦",
         label: "Régénérer le plan IA",
-        why: "La dernière recherche a utilisé uniquement les mots-clés locaux. Forcer un nouveau plan Gemini peut découvrir d'autres offres.",
+        why: "La dernière recherche a utilisé uniquement les mots-clés locaux. Forcer un nouveau plan IA peut découvrir d'autres offres.",
         onAct: () => onRelanceWith({}),
       });
     }
@@ -571,7 +571,7 @@ export function SimpleSearchPanel({
                     )}
                   </div>
                   <div className="smart-field intent-field">
-                    <FieldHelp label="Intention libre" hint="contexte IA" tooltip="Intention libre : écris ce que tu veux vraiment. Gemini s'en sert pour trouver les bons intitulés sans te demander toutes les variantes de mots-clés." />
+                    <FieldHelp label="Intention libre" hint="contexte IA" tooltip="Intention libre : écris ce que tu veux vraiment. Le fournisseur IA s'en sert pour trouver les bons intitulés sans te demander toutes les variantes de mots-clés." />
                     <textarea
                       rows={4}
                       value={strategy.assistantIntent}
@@ -793,7 +793,7 @@ export function SimpleSearchPanel({
               </div>
               <div className="assistant-card-content">
                 <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "12px" }}>
-                  Corrige cette synthèse si besoin. Elle sert de contexte à Gemini et au classement.
+                  Corrige cette synthèse si besoin. Elle sert de contexte au fournisseur IA et au classement.
                 </p>
                 <div className="smart-field objective-field">
                   <div className="smart-field-label">
@@ -909,7 +909,7 @@ export function SimpleSearchPanel({
       </details>
 
       <div className="simple-action-row">
-        <HelpTooltip tooltip="Lance la collecte : les variantes locales fonctionnent sans API. Gemini enrichit la recherche et le classement s'il est disponible.">
+        <HelpTooltip tooltip="Lance la collecte : les variantes locales fonctionnent sans API. Le fournisseur IA enrichit la recherche et le classement s'il est disponible.">
           <button className={`primary-button one-button ${loadingAction === "run-search" ? "is-loading" : ""}`} onClick={runPrimaryAssistantAction} disabled={!canSearch}>
             {loadingAction === "run-search" && <span className="button-spinner" aria-hidden="true" />}
             {primaryAssistantLabel}
