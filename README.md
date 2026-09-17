@@ -4,6 +4,9 @@
 
 [![CI](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml/badge.svg)](https://github.com/Sn0wshine/taf-sniffer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Local-First](https://img.shields.io/badge/Architecture-Local--First-blue.svg)](docs/PRODUCT.md)
+
+[🇬🇧 English version](README.en.md)
 
 Taf Sniffer est un agrégateur open source d’offres d’emploi en français. Il rassemble dans une même liste les annonces collectées sur plusieurs sources et les imports manuels, puis aide à les comparer selon ton métier, ta zone et tes priorités. La provenance reste visible pour retrouver la source et vérifier les informations avant de candidater.
 

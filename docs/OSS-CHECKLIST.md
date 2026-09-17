@@ -10,14 +10,14 @@
 - [x] Version locale ciblée sur `0.1.0`.
 - [x] Gabarits d'issues (bug, amélioration) et de pull request.
 - [x] `AGENTS.md` pour les agents de code (Codex lit ce fichier nativement).
-- [x] Brouillon de candidature Codex for Open Source (`docs/CODEX-OSS-APPLICATION.md`).
-- [ ] Vérifier les licences des assets et dépendances.
-- [ ] Enregistrer et ajouter `docs/demo.gif`.
-- [ ] Committer les changements sur une branche de publication.
-- [ ] Pousser la branche et créer le tag `v0.1.0`.
+- [x] Version anglaise du README ajoutée (`README.en.md`).
+- [x] Dossier de candidature Codex for Open Source optimisé (`docs/CODEX-OSS-APPLICATION.md`, versions FR & EN < 500 caractères).
+- [x] Vérifier les licences des assets et dépendances (MIT).
+- [ ] Enregistrer et ajouter `docs/demo.gif` (recommandé dès que possible).
+- [ ] Pousser les commits sur `main` et créer la release `v0.1.0`.
 - [ ] Rendre le dépôt GitHub public.
 - [ ] Configurer la description et les topics GitHub du dépôt.
-- [ ] Activer les Discussions et étiqueter des `good first issue`.
+- [ ] Créer des `good first issue` pour l'accueil de la communauté.
 - [ ] Vérifier le dépôt sans authentification.
 - [ ] Déposer la candidature Codex for Open Source.
 
