@@ -528,6 +528,30 @@ export function SimpleSearchPanel({
           <span className="ghost-button compact criteria-edit-button">{criteriaOpen ? "Réduire" : "Modifier"}</span>
         </summary>
         <div className="criteria-body assistant-body assistant-cards-stack">
+          <div className="assistant-stepper-modern" role="tablist" aria-label="Progression des étapes">
+            {assistantSteps.map((step, idx) => {
+              const isCompleted = idx < activeStepIndex;
+              const isActive = idx === activeStepIndex;
+              const isAccessible = idx <= maxStepIndex;
+              return (
+                <button
+                  key={step.key}
+                  type="button"
+                  className={`stepper-step ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""} ${!isAccessible ? "disabled" : ""}`}
+                  onClick={() => changeStep(idx)}
+                  disabled={!isAccessible}
+                  title={step.tooltip}
+                  aria-selected={isActive}
+                >
+                  <span className="stepper-bubble">
+                    {isCompleted ? "✓" : idx + 1}
+                  </span>
+                  <span className="stepper-label">{step.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {maxStepIndex >= 0 && (
             <div
               className={`assistant-card ${activeStepIndex === 0 ? "is-active" : "is-inactive"}`}

@@ -930,6 +930,20 @@ export function OfferDetail({
   onBackToList?: () => void;
 }) {
   const [editText, setEditText] = useState(job.rawText);
+  const [activeTab, setActiveTab] = useState<"summary" | "details" | "raw">("summary");
+  const [copiedRaw, setCopiedRaw] = useState(false);
+
+  useEffect(() => {
+    if (isEditingExtraction) {
+      setActiveTab("details");
+    }
+  }, [isEditingExtraction]);
+
+  const handleCopyRaw = () => {
+    navigator.clipboard.writeText(job.rawText);
+    setCopiedRaw(true);
+    setTimeout(() => setCopiedRaw(false), 2000);
+  };
   const reviewStatus = normalizeReviewStatus(job);
   const decisionReason = decision.reasons.length ? decision.reasons.join(" · ") : "Correspond aux critères principaux.";
   const controlled = getControlledExtraction(job, analysis);
@@ -1205,28 +1219,6 @@ export function OfferDetail({
               )}
             </div>
           </div>
-
-          {mode === "assistant" && (
-            <QuickDecisionCard
-              job={job}
-              analysis={analysis}
-              decision={decision}
-              strategy={strategy}
-              loadingAction={loadingAction}
-              onAnalyze={onAnalyzeAi}
-              onEditExtraction={onEditExtraction}
-              onIgnore={onToggleIgnored}
-            />
-          )}
-
-          {mode === "advanced" && (
-            <div className="dashboard-verdict-card">
-              <span className="eyebrow">Verdict</span>
-              <strong>{analysis.verdict}</strong>
-              <p>{analysis.summary}</p>
-            </div>
-          )}
-
         </div>
 
         <aside className="offer-dashboard-score" aria-label="Scores de l'offre">
@@ -1243,339 +1235,444 @@ export function OfferDetail({
         </aside>
       </section>
 
-      {mode === "advanced" && (
-        <section className="decision-helper">
-          <div>
-            <strong>Pourquoi la garder</strong>
-            <p>{analysis.positiveSignals[0] || analysis.summary}</p>
-          </div>
-          <div>
-            <strong>Ce qui bloque</strong>
-            <p>{analysis.redFlags[0] || analysis.uncertainties[0] || "Pas de blocage majeur détecté."}</p>
-          </div>
-          <div>
-            <strong>Question clé</strong>
-            <p>{displayedQuestions[0] || "Clarifier le cadre du poste avant candidature."}</p>
-          </div>
-        </section>
-      )}
+      {/* Barre d'onglets thématiques */}
+      <div className="offer-tabs-nav" role="tablist" aria-label="Sections de l'offre">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "summary"}
+          className={`offer-tab-btn ${activeTab === "summary" ? "active" : ""}`}
+          onClick={() => setActiveTab("summary")}
+        >
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span>Synthèse & Décision</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "details"}
+          className={`offer-tab-btn ${activeTab === "details" ? "active" : ""}`}
+          onClick={() => setActiveTab("details")}
+        >
+          <ClipboardList size={16} aria-hidden="true" />
+          <span>Détails & Entreprise</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "raw"}
+          className={`offer-tab-btn ${activeTab === "raw" ? "active" : ""}`}
+          onClick={() => setActiveTab("raw")}
+        >
+          <Copy size={16} aria-hidden="true" />
+          <span>Annonce originale</span>
+        </button>
+      </div>
 
-      {mode === "advanced" && showDebugInfo && <div className="source-grid">
-        <label>
-          Source
-          <input value={job.source || ""} placeholder="France Travail, Indeed..." onChange={(event) => onUpdateMeta({ source: event.target.value })} />
-        </label>
-        <label>
-          URL source
-          <input value={job.sourceUrl || ""} placeholder="https://..." onChange={(event) => onUpdateMeta({ sourceUrl: event.target.value })} />
-        </label>
-      </div>}
+      <div className="offer-tab-content">
+        {activeTab === "summary" && (
+          <div className="offer-tab-pane offer-tab-summary">
+            {mode === "assistant" && (
+              <QuickDecisionCard
+                job={job}
+                analysis={analysis}
+                decision={decision}
+                strategy={strategy}
+                loadingAction={loadingAction}
+                onAnalyze={onAnalyzeAi}
+                onEditExtraction={() => { setActiveTab("details"); onEditExtraction(); }}
+                onIgnore={onToggleIgnored}
+              />
+            )}
 
-      {mode === "advanced" && (
-        <section className="decision-strip">
-          <div>
-            <InfoChip className={confidenceClass(analysis.scoreConfidence)} tooltip={confidenceTooltip(analysis.scoreConfidence)}>
-              Confiance {analysis.scoreConfidence}
-            </InfoChip>
-            <p>
-              {analysis.confidenceReasons.length > 0
-                ? analysis.confidenceReasons.join(" · ")
-                : "Les informations principales sont suffisamment présentes pour un premier tri."}
-            </p>
-            {analysis.verdictReasons.length > 0 && <p>{analysis.verdictReasons.join(" · ")}</p>}
-          </div>
-          <strong>{analysis.scoreConfidence === "faible" ? "Score à confirmer avant décision" : analysis.verdict}</strong>
-        </section>
-      )}
-
-      {mode === "advanced" && (
-        <section className="detail-section">
-          <div className="section-title">
-            <ShieldCheck size={18} aria-hidden="true" />
-            <h3>Verdict</h3>
-          </div>
-          <p>{analysis.summary}</p>
-          <p className="muted">Salaire : {analysis.salary}</p>
-        </section>
-      )}
-
-      {mode === "advanced" && <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} />}
-
-      {mode === "advanced" && (
-        <div className="three-columns">
-          <SignalList title="Signaux positifs" items={analysis.positiveSignals} empty="Aucun signal fort détecté." tone="positive" />
-          <SignalList title="Red flags" items={analysis.redFlags} empty="Pas de gros red flag." tone="negative" />
-          <SignalList title="À vérifier" items={analysis.uncertainties} empty="Peu d'incertitudes." tone="warning" />
-        </div>
-      )}
-
-      <section className="extracted-info" aria-label="Infos extraites de l'annonce">
-        <div className="extracted-info-header">
-          <h3>Infos extraites</h3>
-          {isEditingExtraction ? (
-            <span className="extraction-status">{extractionReviewLabel(extractionDraft.extractionReview)}</span>
-          ) : (
-            <div className="extracted-info-actions">
-              {job.sourceUrl && !isSearchResultUrl(job.sourceUrl) && (
-                <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-                  ouvrir l'annonce
-                </a>
-              )}
-              <button className="ghost-button compact" onClick={onEditExtraction}>
-                Corriger
-              </button>
-            </div>
-          )}
-        </div>
-        {!isEditingExtraction && qualityIssues.length > 0 && (
-          <p className="quality-inline-warning">
-            IA : {qualityIssues.map((item) => `${item.field} à vérifier`).join(" · ")}
-          </p>
-        )}
-        {!isEditingExtraction && <FormationSignalsCard rawText={analysis.rawText || job.rawText} />}
-        {!isEditingExtraction && (
-          <div className="salary-normalized-panel" aria-label="Salaire normalisé">
-            <div className="salary-normalized-head">
-              <div>
-                <strong>Salaire normalisé</strong>
-                <span>Fixe sans primes, puis package si estimable.</span>
-              </div>
-              <div className="extracted-info-badges">
-                {salaryFieldMeta?.source === "ai" && (
-                  <InfoChip className="field-source-chip ai" tooltip={extractionSourceTooltip("ai")}>
-                    IA
-                  </InfoChip>
-                )}
-                {showDebugInfo && salaryFieldMeta && salaryFieldMeta.source !== "ai" && (
-                  <InfoChip className={`field-source-chip ${salaryFieldMeta.source}`} tooltip={extractionSourceTooltip(salaryFieldMeta.source)}>
-                    {extractionSourceLabel(salaryFieldMeta.source)}
-                  </InfoChip>
-                )}
-                {salaryFieldMeta?.quality === "verify" && (
-                  <InfoChip className="field-quality-chip verify" tooltip={fieldQualityTooltip("verify", salaryFieldMeta.reason)}>
-                    à vérifier
-                  </InfoChip>
-                )}
-                {salaryFieldMeta?.quality === "conflict" && (
-                  <InfoChip className="field-quality-chip conflict" tooltip={fieldQualityTooltip("conflict", salaryFieldMeta.reason)}>
-                    conflit IA
-                  </InfoChip>
-                )}
-                <InfoChip
-                  className={`salary-kind-chip ${displayedSalaryKind === "non précisé" ? "unknown" : "known"}`}
-                  tooltip={salaryKindTooltip(analysis.salaryKind)}
-                >
-                  {displayedSalaryKind}
-                </InfoChip>
-              </div>
-            </div>
-            <div className="salary-normalized-grid">
-              {salaryMetrics.map(([label, value], index) => (
-                <div className={`salary-normalized-item ${index === 0 ? "primary" : ""}`} key={label}>
-                  <span>{label}</span>
-                  <strong>{value || "Non disponible"}</strong>
+            {mode === "advanced" && (
+              <>
+                <div className="dashboard-verdict-card">
+                  <span className="eyebrow">Verdict</span>
+                  <strong>{analysis.verdict}</strong>
+                  <p>{analysis.summary}</p>
                 </div>
-              ))}
-            </div>
-            {marketPosition && (
-              <small className={`salary-market-position tone-${marketPosition.tone}`}>
-                📊 {marketPosition.label}
-              </small>
+
+                <section className="decision-helper">
+                  <div>
+                    <strong>Pourquoi la garder</strong>
+                    <p>{analysis.positiveSignals[0] || analysis.summary}</p>
+                  </div>
+                  <div>
+                    <strong>Ce qui bloque</strong>
+                    <p>{analysis.redFlags[0] || analysis.uncertainties[0] || "Pas de blocage majeur détecté."}</p>
+                  </div>
+                  <div>
+                    <strong>Question clé</strong>
+                    <p>{displayedQuestions[0] || "Clarifier le cadre du poste avant candidature."}</p>
+                  </div>
+                </section>
+
+                <section className="decision-strip">
+                  <div>
+                    <InfoChip className={confidenceClass(analysis.scoreConfidence)} tooltip={confidenceTooltip(analysis.scoreConfidence)}>
+                      Confiance {analysis.scoreConfidence}
+                    </InfoChip>
+                    <p>
+                      {analysis.confidenceReasons.length > 0
+                        ? analysis.confidenceReasons.join(" · ")
+                        : "Les informations principales sont suffisamment présentes pour un premier tri."}
+                    </p>
+                    {analysis.verdictReasons.length > 0 && <p>{analysis.verdictReasons.join(" · ")}</p>}
+                  </div>
+                  <strong>{analysis.scoreConfidence === "faible" ? "Score à confirmer avant décision" : analysis.verdict}</strong>
+                </section>
+
+                <section className="detail-section">
+                  <div className="section-title">
+                    <ShieldCheck size={18} aria-hidden="true" />
+                    <h3>Verdict</h3>
+                  </div>
+                  <p>{analysis.summary}</p>
+                  <p className="muted">Salaire : {analysis.salary}</p>
+                </section>
+              </>
             )}
-            {showDebugInfo && salaryFieldMeta && salaryFieldMeta.quality !== "ok" && salaryFieldMeta.reason && (
-              <small className="field-quality-reason">{salaryFieldMeta.reason}</small>
+
+            {/* Salaire normalisé & Repère marché */}
+            <div className="salary-normalized-panel" aria-label="Salaire normalisé">
+              <div className="salary-normalized-head">
+                <div>
+                  <strong>Salaire normalisé</strong>
+                  <span>Fixe sans primes, puis package si estimable.</span>
+                </div>
+                <div className="extracted-info-badges">
+                  {salaryFieldMeta?.source === "ai" && (
+                    <InfoChip className="field-source-chip ai" tooltip={extractionSourceTooltip("ai")}>
+                      IA
+                    </InfoChip>
+                  )}
+                  {showDebugInfo && salaryFieldMeta && salaryFieldMeta.source !== "ai" && (
+                    <InfoChip className={`field-source-chip ${salaryFieldMeta.source}`} tooltip={extractionSourceTooltip(salaryFieldMeta.source)}>
+                      {extractionSourceLabel(salaryFieldMeta.source)}
+                    </InfoChip>
+                  )}
+                  {salaryFieldMeta?.quality === "verify" && (
+                    <InfoChip className="field-quality-chip verify" tooltip={fieldQualityTooltip("verify", salaryFieldMeta.reason)}>
+                      à vérifier
+                    </InfoChip>
+                  )}
+                  {salaryFieldMeta?.quality === "conflict" && (
+                    <InfoChip className="field-quality-chip conflict" tooltip={fieldQualityTooltip("conflict", salaryFieldMeta.reason)}>
+                      conflit IA
+                    </InfoChip>
+                  )}
+                  <InfoChip
+                    className={`salary-kind-chip ${displayedSalaryKind === "non précisé" ? "unknown" : "known"}`}
+                    tooltip={salaryKindTooltip(analysis.salaryKind)}
+                  >
+                    {displayedSalaryKind}
+                  </InfoChip>
+                </div>
+              </div>
+              <div className="salary-normalized-grid">
+                {salaryMetrics.map(([label, value], index) => (
+                  <div className={`salary-normalized-item ${index === 0 ? "primary" : ""}`} key={label}>
+                    <span>{label}</span>
+                    <strong>{value || "Non disponible"}</strong>
+                  </div>
+                ))}
+              </div>
+              {marketPosition && (
+                <small className={`salary-market-position tone-${marketPosition.tone}`}>
+                  📊 {marketPosition.label}
+                </small>
+              )}
+              {showDebugInfo && salaryFieldMeta && salaryFieldMeta.quality !== "ok" && salaryFieldMeta.reason && (
+                <small className="field-quality-reason">{salaryFieldMeta.reason}</small>
+              )}
+            </div>
+
+            {/* Signaux de décision */}
+            <div className="three-columns">
+              <SignalList title="Signaux positifs" items={analysis.positiveSignals} empty="Aucun signal fort détecté." tone="positive" />
+              <SignalList title="Red flags" items={analysis.redFlags} empty="Pas de gros red flag." tone="negative" />
+              <SignalList title="À vérifier" items={analysis.uncertainties} empty="Peu d'incertitudes." tone="warning" />
+            </div>
+
+            {/* Analyse IA */}
+            {mode === "assistant" ? (
+              <CollapsibleDetail title="Avis IA complet">
+                <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} showQuestions={false} />
+              </CollapsibleDetail>
+            ) : (
+              <>
+                <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} />
+                <section className="detail-section">
+                  <div className="section-title">
+                    <AlertTriangle size={18} aria-hidden="true" />
+                    <h3>Pourquoi ce score ?</h3>
+                  </div>
+                  <ScoreExplanation analysis={analysis} />
+                </section>
+              </>
             )}
           </div>
         )}
-        {isEditingExtraction ? (
-          <>
-            <div className="extraction-edit-form">
-              <label>
-                Titre
-                <input value={extractionDraft.title} onChange={(event) => updateExtractionDraft("title", event.target.value)} />
-              </label>
-              <label>
-                Entreprise
-                <input value={extractionDraft.company} onChange={(event) => updateExtractionDraft("company", event.target.value)} />
-              </label>
-              <label>
-                Lieu
-                <input value={extractionDraft.location} onChange={(event) => updateExtractionDraft("location", event.target.value)} />
-              </label>
-              <label>
-                Contrat
-                <input value={extractionDraft.contract} onChange={(event) => updateExtractionDraft("contract", event.target.value)} />
-              </label>
-              <label>
-                Temps de travail
-                <input value={extractionDraft.workTime} placeholder="35H, 39H, temps partiel..." onChange={(event) => updateExtractionDraft("workTime", event.target.value)} />
-              </label>
-              <label>
-                Salaire
-                <input value={extractionDraft.salary} onChange={(event) => updateExtractionDraft("salary", event.target.value)} />
-              </label>
-              <label>
-                Primes
-                <input value={extractionDraft.bonus} placeholder="Non mentionnées, variable, 13e mois..." onChange={(event) => updateExtractionDraft("bonus", event.target.value)} />
-              </label>
-              <label>
-                Expérience demandée
-                <input value={extractionDraft.requiredExperience} placeholder="Débutant accepté, 2 ans, confirmé..." onChange={(event) => updateExtractionDraft("requiredExperience", event.target.value)} />
-              </label>
-              <label>
-                Avantages
-                <input value={extractionDraft.benefits} placeholder="Véhicule, tickets restaurant, mutuelle..." onChange={(event) => updateExtractionDraft("benefits", event.target.value)} />
-              </label>
-              <label>
-                Source
-                <input value={extractionDraft.source} placeholder="France Travail, Indeed..." onChange={(event) => updateExtractionDraft("source", event.target.value)} />
-              </label>
-              <label>
-                URL source
-                <input value={extractionDraft.sourceUrl} placeholder="https://..." onChange={(event) => updateExtractionDraft("sourceUrl", event.target.value)} />
-              </label>
-              <label>
-                Statut extraction
-                <select
-                  value={extractionDraft.extractionReview}
-                  onChange={(event) => updateExtractionDraft("extractionReview", event.target.value)}
-                >
-                  <option value="ok">Extraction OK</option>
-                  <option value="needs_review">À vérifier</option>
-                  <option value="manual">Corrigée manuellement</option>
-                </select>
-              </label>
-            </div>
-            <div className="button-row">
-              <button className="primary-button compact" onClick={() => onSaveExtraction(extractionDraft)}>
-                Enregistrer
-              </button>
-              <button className="ghost-button compact" onClick={onCancelExtraction}>
-                Annuler
-              </button>
-              <button className="ghost-button compact danger-text" onClick={onClearExtraction}>
-                Effacer corrections
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            {quickFacts.length > 0 && (
-              <div className="extracted-info-quickstrip">
-                {quickFacts.map(([label, value]) => {
-                  const fieldKey = extractionFieldForLabel(label);
-                  const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
-                  return (
-                    <div className={`quickfact field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
-                      <span className="quickfact-label">{label}</span>
-                      <span className="quickfact-value">{value || "Non détecté"}</span>
-                      <div className="quickfact-badges">
-                        <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
-                      </div>
+
+        {activeTab === "details" && (
+          <div className="offer-tab-pane offer-tab-details">
+            <section className="extracted-info" aria-label="Infos extraites de l'annonce">
+              <div className="extracted-info-header">
+                <h3>Infos extraites</h3>
+                {isEditingExtraction ? (
+                  <span className="extraction-status">{extractionReviewLabel(extractionDraft.extractionReview)}</span>
+                ) : (
+                  <div className="extracted-info-actions">
+                    {job.sourceUrl && !isSearchResultUrl(job.sourceUrl) && (
+                      <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+                        ouvrir l'annonce
+                      </a>
+                    )}
+                    <button className="ghost-button compact" onClick={onEditExtraction}>
+                      Corriger
+                    </button>
+                  </div>
+                )}
+              </div>
+              {!isEditingExtraction && qualityIssues.length > 0 && (
+                <p className="quality-inline-warning">
+                  IA : {qualityIssues.map((item) => `${item.field} à vérifier`).join(" · ")}
+                </p>
+              )}
+              {!isEditingExtraction && <FormationSignalsCard rawText={analysis.rawText || job.rawText} />}
+              {isEditingExtraction ? (
+                <>
+                  <div className="extraction-edit-form">
+                    <label>
+                      Titre
+                      <input value={extractionDraft.title} onChange={(event) => updateExtractionDraft("title", event.target.value)} />
+                    </label>
+                    <label>
+                      Entreprise
+                      <input value={extractionDraft.company} onChange={(event) => updateExtractionDraft("company", event.target.value)} />
+                    </label>
+                    <label>
+                      Lieu
+                      <input value={extractionDraft.location} onChange={(event) => updateExtractionDraft("location", event.target.value)} />
+                    </label>
+                    <label>
+                      Contrat
+                      <input value={extractionDraft.contract} onChange={(event) => updateExtractionDraft("contract", event.target.value)} />
+                    </label>
+                    <label>
+                      Temps de travail
+                      <input value={extractionDraft.workTime} placeholder="35H, 39H, temps partiel..." onChange={(event) => updateExtractionDraft("workTime", event.target.value)} />
+                    </label>
+                    <label>
+                      Salaire
+                      <input value={extractionDraft.salary} onChange={(event) => updateExtractionDraft("salary", event.target.value)} />
+                    </label>
+                    <label>
+                      Primes
+                      <input value={extractionDraft.bonus} placeholder="Non mentionnées, variable, 13e mois..." onChange={(event) => updateExtractionDraft("bonus", event.target.value)} />
+                    </label>
+                    <label>
+                      Expérience demandée
+                      <input value={extractionDraft.requiredExperience} placeholder="Débutant accepté, 2 ans, confirmé..." onChange={(event) => updateExtractionDraft("requiredExperience", event.target.value)} />
+                    </label>
+                    <label>
+                      Avantages
+                      <input value={extractionDraft.benefits} placeholder="Véhicule, tickets restaurant, mutuelle..." onChange={(event) => updateExtractionDraft("benefits", event.target.value)} />
+                    </label>
+                    <label>
+                      Source
+                      <input value={extractionDraft.source} placeholder="France Travail, Indeed..." onChange={(event) => updateExtractionDraft("source", event.target.value)} />
+                    </label>
+                    <label>
+                      URL source
+                      <input value={extractionDraft.sourceUrl} placeholder="https://..." onChange={(event) => updateExtractionDraft("sourceUrl", event.target.value)} />
+                    </label>
+                    <label>
+                      Statut extraction
+                      <select
+                        value={extractionDraft.extractionReview}
+                        onChange={(event) => updateExtractionDraft("extractionReview", event.target.value)}
+                      >
+                        <option value="ok">Extraction OK</option>
+                        <option value="needs_review">À vérifier</option>
+                        <option value="manual">Corrigée manuellement</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="button-row">
+                    <button className="primary-button compact" onClick={() => onSaveExtraction(extractionDraft)}>
+                      Enregistrer
+                    </button>
+                    <button className="ghost-button compact" onClick={onCancelExtraction}>
+                      Annuler
+                    </button>
+                    <button className="ghost-button compact danger-text" onClick={onClearExtraction}>
+                      Effacer corrections
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {quickFacts.length > 0 && (
+                    <div className="extracted-info-quickstrip">
+                      {quickFacts.map(([label, value]) => {
+                        const fieldKey = extractionFieldForLabel(label);
+                        const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
+                        return (
+                          <div className={`quickfact field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
+                            <span className="quickfact-label">{label}</span>
+                            <span className="quickfact-value">{value || "Non détecté"}</span>
+                            <div className="quickfact-badges">
+                              <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  )}
+                  {detailFacts.length > 0 && (
+                    <div className="extracted-info-table">
+                      {detailFacts.map(([label, value]) => {
+                        const fieldKey = extractionFieldForLabel(label);
+                        const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
+                        const showCompanyActions = label === "Entreprise" && canIdentifyCompany && (mode === "advanced" || showDebugInfo);
+                        return (
+                          <div className={`eit-block field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
+                            <div className="eit-row">
+                              <span className="eit-label">{label}</span>
+                              <div className="eit-value">
+                                <ExtractedInfoValue label={label} value={value} />
+                              </div>
+                              <div className="eit-badges">
+                                <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
+                              </div>
+                            </div>
+                            {showDebugInfo && fieldMeta && fieldMeta.quality !== "ok" && fieldMeta.reason && (
+                              <small className="field-quality-reason eit-reason">{fieldMeta.reason}</small>
+                            )}
+                            {showCompanyActions && (
+                              <div className="company-profile-actions eit-company">
+                                {companyLoading ? (
+                                  <span className="company-profile-loading">Identification...</span>
+                                ) : companyProfileVisible ? (
+                                  <CompanyProfileCard profile={companyProfile!} />
+                                ) : (
+                                  <button className="ghost-button compact" onClick={onIdentifyCompany}>
+                                    Identifier
+                                  </button>
+                                )}
+                                {(companyProfile?.status === "error" || companyProfile?.status === "not_found") && !companyLoading && (
+                                  <button className="ghost-button compact" onClick={onIdentifyCompany}>
+                                    Réessayer
+                                  </button>
+                                )}
+                                <a className="company-search-link" href={analysis.companySearchUrl} target="_blank" rel="noopener noreferrer">
+                                  Vérifier sur le web
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
+            {mode === "advanced" && showDebugInfo && (
+              <div className="source-grid">
+                <label>
+                  Source
+                  <input value={job.source || ""} placeholder="France Travail, Indeed..." onChange={(event) => onUpdateMeta({ source: event.target.value })} />
+                </label>
+                <label>
+                  URL source
+                  <input value={job.sourceUrl || ""} placeholder="https://..." onChange={(event) => onUpdateMeta({ sourceUrl: event.target.value })} />
+                </label>
               </div>
             )}
-            {detailFacts.length > 0 && (
-              <div className="extracted-info-table">
-                {detailFacts.map(([label, value]) => {
-                  const fieldKey = extractionFieldForLabel(label);
-                  const fieldMeta = fieldKey ? controlled.fields[fieldKey] : undefined;
-                  const showCompanyActions = label === "Entreprise" && canIdentifyCompany && (mode === "advanced" || showDebugInfo);
-                  return (
-                    <div className={`eit-block field-${fieldKey || label.toLowerCase().replace(/\s+/g, "-")}`} key={label}>
-                      <div className="eit-row">
-                        <span className="eit-label">{label}</span>
-                        <div className="eit-value">
-                          <ExtractedInfoValue label={label} value={value} />
-                        </div>
-                        <div className="eit-badges">
-                          <ExtractedFieldBadges label={label} fieldMeta={fieldMeta} showDebugInfo={showDebugInfo} analysis={analysis} />
-                        </div>
-                      </div>
-                      {showDebugInfo && fieldMeta && fieldMeta.quality !== "ok" && fieldMeta.reason && (
-                        <small className="field-quality-reason eit-reason">{fieldMeta.reason}</small>
-                      )}
-                      {showCompanyActions && (
-                        <div className="company-profile-actions eit-company">
-                          {companyLoading ? (
-                            <span className="company-profile-loading">Identification...</span>
-                          ) : companyProfileVisible ? (
-                            <CompanyProfileCard profile={companyProfile!} />
-                          ) : (
-                            <button className="ghost-button compact" onClick={onIdentifyCompany}>
-                              Identifier
-                            </button>
-                          )}
-                          {(companyProfile?.status === "error" || companyProfile?.status === "not_found") && !companyLoading && (
-                            <button className="ghost-button compact" onClick={onIdentifyCompany}>
-                              Réessayer
-                            </button>
-                          )}
-                          <a className="company-search-link" href={analysis.companySearchUrl} target="_blank" rel="noopener noreferrer">
-                            Vérifier sur le web
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+
+            {mode === "advanced" && (
+              <TerrainQuickReview job={job} analysis={analysis} onUpdateExpectedReview={onUpdateExpectedReview} />
             )}
-          </>
+
+            <section className="detail-section">
+              <div className="section-title">
+                <ClipboardList size={18} aria-hidden="true" />
+                <h3>Questions à poser</h3>
+              </div>
+              <ol className="question-list">
+                {displayedQuestions.map((question) => (
+                  <li key={question}>{question}</li>
+                ))}
+              </ol>
+            </section>
+
+            <section className="detail-section">
+              <h3>Angle candidature</h3>
+              <p>{analysis.applicationAngle}</p>
+            </section>
+          </div>
         )}
-      </section>
 
-      {mode === "advanced" && (
-        <TerrainQuickReview job={job} analysis={analysis} onUpdateExpectedReview={onUpdateExpectedReview} />
-      )}
-
-      {mode === "assistant" ? (
-        <CollapsibleDetail title="Avis IA complet">
-          <AIReviewCard job={job} analysis={analysis} onAnalyze={onAnalyzeAi} loadingAction={loadingAction} showQuestions={false} />
-        </CollapsibleDetail>
-      ) : (
-        <>
-          <section className="detail-section">
-            <div className="section-title">
-              <AlertTriangle size={18} aria-hidden="true" />
-              <h3>Pourquoi ce score ?</h3>
+        {activeTab === "raw" && (
+          <div className="offer-tab-pane offer-tab-raw">
+            <div className="raw-offer-pane-header">
+              <div className="raw-offer-pane-meta">
+                <strong>Texte complet de l'annonce</strong>
+                <span className="muted">{(job.rawText || "").length.toLocaleString("fr-FR")} caractères</span>
+              </div>
+              <div className="raw-offer-pane-actions">
+                <button
+                  type="button"
+                  className="ghost-button compact"
+                  onClick={handleCopyRaw}
+                >
+                  <Copy size={14} aria-hidden="true" />
+                  <span>{copiedRaw ? "Copié !" : "Copier le texte"}</span>
+                </button>
+                {job.sourceUrl && !isSearchResultUrl(job.sourceUrl) && (
+                  <a
+                    className="ghost-button compact"
+                    href={job.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                    <span>Ouvrir la source</span>
+                  </a>
+                )}
+              </div>
             </div>
-            <ScoreExplanation analysis={analysis} />
-          </section>
 
-          <section className="detail-section">
-            <div className="section-title">
-              <ClipboardList size={18} aria-hidden="true" />
-              <h3>Questions à poser</h3>
-            </div>
-            <ol className="question-list">
-              {displayedQuestions.map((question) => (
-                <li key={question}>{question}</li>
-              ))}
-            </ol>
-          </section>
-
-          <section className="detail-section">
-            <h3>Angle candidature</h3>
-            <p>{analysis.applicationAngle}</p>
-          </section>
-
-          {showDebugInfo && <details className="raw-offer">
-            <summary>Modifier / voir le texte original</summary>
-            <textarea className="edit-offer-box" rows={12} value={editText} onChange={(event) => setEditText(event.target.value)} />
-            <div className="button-row">
-              <button className="primary-button compact" onClick={() => onSaveRaw(editText.trim())} disabled={editText.trim().length < 40}>
-                Enregistrer
-              </button>
-              <button className="ghost-button compact" onClick={() => navigator.clipboard.writeText(job.rawText)}>
-                Copier le texte
-              </button>
-            </div>
-          </details>}
-        </>
-      )}
+            {showDebugInfo ? (
+              <div className="raw-offer-editor">
+                <textarea
+                  className="edit-offer-box"
+                  rows={16}
+                  value={editText}
+                  onChange={(event) => setEditText(event.target.value)}
+                />
+                <div className="button-row">
+                  <button
+                    className="primary-button compact"
+                    onClick={() => onSaveRaw(editText.trim())}
+                    disabled={editText.trim().length < 40}
+                  >
+                    Enregistrer les modifications
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="raw-offer-body-view">
+                <pre>{job.rawText || "Aucun texte disponible pour cette offre."}</pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </article>
     {actionBar}
     </>
